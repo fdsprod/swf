@@ -1,6 +1,6 @@
 # Software factory bootstrap
 
-The factory runs one work request through a deterministic kernel. It runs Codex in a restricted Git worktree, executes separate verification commands, and saves evidence for the exact candidate. Only the kernel can mark the unit `VERIFIED`. Durable history supports restart recovery. P3 adds GitHub decision comments and fresh workers after human answers. Its local checks pass; its required real GitHub exercise is still pending.
+The factory runs one work request in a restricted Git worktree. Separate verification commands check the exact candidate. Durable history supports restart recovery, human decisions, and bounded local repair. P5 adds GitHub issue intake, one verified commit, pull request delivery, and required CI checks. P5 validation is in progress. Required real GitHub proof is still pending.
 
 Use Node.js 22.22.3 or later and npm. From the repository root:
 
@@ -45,16 +45,28 @@ To enable human decisions, configure `decisions` with a pinned GitHub CLI execut
 
 To enable bounded repair in a durable local run, add `"repair": { "kind": "local_verification", "maxRepairs": 1 }` to the configuration. The default repair limit is one when the option is present. The repair worker receives the original failed verification and exact command output. It runs under the same checks and the separate total worker-start limit. Omitting `repair` preserves the existing stop at `REPAIR_READY`. See the [P4 contract](tests/spec/p4-contract.md).
 
-Run the cumulative P4 acceptance gate:
+For GitHub intake and delivery, create a configuration from the [P5 contract](tests/spec/p5-contract.md). Set the issue, base branch, trusted runtime and verification commands, Git and GitHub CLI programs, commit identity, transport, and required check names with their provider app IDs. The local base must match the observed target base. Keep the store outside the source repository and worker workspace.
 
 ```powershell
-node tests/spec/p4/harness/run-gates.mjs
+node dist/cli/main.js run --github github-config.json --store C:/factory-state/github-run-1 --json
+node dist/cli/main.js resume --store C:/factory-state/github-run-1 --json
+node dist/cli/main.js status --store C:/factory-state/github-run-1 --json
 ```
 
-This includes repair and decision recovery, all earlier acceptance tests, a live Codex call, native sandbox probes, typecheck, build, and architecture checks. Set `P1_CODEX_EXE` if the installed native executable differs from the harness default. Logs and the frozen bundle digest go under `.p4-proof/latest/`. The coordinator uses this trusted runner outside the product worktree with `FACTORY_CANDIDATE_ROOT` and `P4_PROOF_DIR`. Missing required [live P3 evidence](tests/spec/p3/LIVE.md) makes the gate fail even when all local checks pass. The offline P0 gate remains `node tests/spec/harness/run-gates.mjs`.
+The first run snapshots the issue and configuration. Resume uses that saved request, checks the evidence, and continues incomplete work. Status reads the last committed state without network calls or new work. Delivery requires a nonempty allowed change and current verification for its exact bytes. The factory creates a deterministic commit on the original base, creates a branch without overwriting a different ref, and creates or reconciles one pull request. The explicit local bare transport supports offline execution and tests.
+
+Local execution, delivery, and CI have separate states. `VERIFIED` means the local candidate passed its checks. A GitHub run succeeds only when its pull request is open or merged and every required check passes for the exact delivered head and provider. Pending, failed, ambiguous, or stale CI exits 1. A closed, unmerged pull request also exits 1. The exit-0 wait for a human decision is unchanged. The factory does not merge pull requests or repair CI failures.
+
+Run the cumulative P5 acceptance gate:
+
+```powershell
+node tests/spec/p5/harness/run-gates.mjs
+```
+
+This includes delivery and CI recovery, all earlier acceptance tests, a live Codex call, native sandbox probes, typecheck, build, and architecture checks. Set `P1_CODEX_EXE` if the installed native executable differs from the harness default. Logs and the frozen bundle digest go under `.p5-proof/latest/`. The coordinator uses this trusted runner outside the product worktree with `FACTORY_CANDIDATE_ROOT` and `P5_PROOF_DIR`. Missing required [live P3 evidence](tests/spec/p3/LIVE.md) or [live P5 evidence](tests/spec/p5/LIVE.md) makes the gate fail even when all local checks pass. The offline P0 gate remains `node tests/spec/harness/run-gates.mjs`.
 
 The project is one npm package. `src/contracts` owns protocol types, schemas, and validation. `src/kernel` owns transitions and orchestration through separate worker and verifier ports. `src/adapters` supplies process, filesystem, sandbox, and scripted adapters. `src/cli` composes these modules. `tests/spec` contains the independently authored acceptance bundle.
 
-Commands in P0 fixtures remain opaque labels. Real verification commands use an executable and argument vector. GitHub issue intake, PR delivery, and CI observation are being added in P5.
+Commands in P0 fixtures remain opaque labels. Real verification commands use an executable and argument vector.
 
-See the [P3 local verification report](docs/phase-reports/p3.md), [P2 execution report](docs/phase-reports/p2.md), [P1 acceptance report](docs/phase-reports/p1.md), [P0 acceptance report](docs/phase-reports/p0.md), [bootstrap plan](docs/bootstrap-plan.md), and [execution boundaries](docs/adr/local-execution.md).
+See the [P5 execution report](docs/phase-reports/p5.md), [P4 local verification report](docs/phase-reports/p4.md), [P3 local verification report](docs/phase-reports/p3.md), [P2 execution report](docs/phase-reports/p2.md), [P1 acceptance report](docs/phase-reports/p1.md), [P0 acceptance report](docs/phase-reports/p0.md), [bootstrap plan](docs/bootstrap-plan.md), and [execution boundaries](docs/adr/local-execution.md).
