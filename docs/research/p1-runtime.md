@@ -107,3 +107,35 @@ Fixtures are deliberately retained for inspection. Before deleting any fixture r
 The local installed help was checked first. Official documentation describes the Windows sandbox modes and named permission profiles: [Windows sandbox](https://learn.chatgpt.com/docs/windows/windows-sandbox) and [configuration reference](https://learn.chatgpt.com/docs/config-file/config-reference). These explain the controls; the observations above establish behavior on this machine.
 
 Microsoft documents descendant inheritance and kill-on-close semantics in [Job Objects](https://learn.microsoft.com/en-us/windows/win32/procthread/job-objects) and [Job limit flags](https://learn.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-jobobject_basic_limit_information).
+
+## Project configuration and host-side MCP startup
+
+`config-probe.mjs` made three tiny live calls with native Codex `0.157.1` and Node `v22.22.3`. Installed `exec --help` describes `--ignore-user-config` as skipping the user `config.toml` while retaining the authentication location. It does not advertise a universal MCP disable switch.
+
+The probe created a new disposable Git repository with `.codex/config.toml` naming one dummy stdio MCP server. Its only filesystem action was to write its PID and startup time to a sentinel outside the worktree. It exposed no tools, read no credentials, and made no network requests. It answered protocol initialization and closed with stdin or after a 60-second limit. No user config or persisted trust entry was changed. The model only answered `OK`; it made no tool calls.
+
+Every invocation used `--no-daemon`, `--ask-for-approval never`, `exec --ignore-user-config`, the named P1 filesystem profile, and disabled tool network access. None used `--ignore-rules` or a sandbox bypass.
+
+| Case | Explicit CLI MCP settings | Dummy started | CLI outcome |
+|---|---|---|---|
+| Project config only | None | No | Exit 0, `OK` |
+| Startup positive control | Dummy command and arguments, `enabled=true` | Yes; external sentinel written | Exit 0, `OK` |
+| Disabled control | Same command and arguments, `enabled=false` | No | Exit 0, `OK` |
+
+The positive control authorizes only the disposable dummy through trusted launch arguments. It does not mark the repository trusted. Its startup proves that an enabled host MCP process can write outside the model's tool-command filesystem boundary. Approval `never` and disabled tool networking did not prevent that startup.
+
+The supported per-server override tested here is:
+
+```text
+-c mcp_servers.p1_probe.enabled=false
+```
+
+This disables the named server. It does not establish a wildcard policy for unknown MCP servers or plugins. No empty-table merge assumption was tested or adopted.
+
+Project-only startup was absent in this fresh repository. This is consistent with the documented requirement for project trust. It does not prove that `--ignore-user-config` suppresses project settings in every trusted repository. P1 must fail closed when its selected configuration cannot exclude inherited host authority. Do not force project trust to make an execution work.
+
+The probe retained the rules flag default, but did not prove project-local rules were loaded. Official documentation says untrusted project layers include config, hooks, and rules. That distinction matters when defining the final launch policy. See [project configuration and trust](https://learn.chatgpt.com/docs/config-file/config-advanced) and the documented per-server `enabled` setting in [MCP configuration](https://learn.chatgpt.com/docs/extend/mcp).
+
+Evidence is retained at `C:/Users/fdspr/AppData/Local/Temp/swf-p1-config-WKxkjr`. Its root `result.json` records executable version, arguments, exits, and observations. Each case has stdout JSONL, stderr, final output, and a result file. The positive-control server PID was no longer running after the probe.
+
+Reproduce with `node tests/learning/p1/config-probe.mjs`. It creates a fresh disposable repository and makes three small model calls. Keep this probe as research documentation, outside the acceptance suite. It does not establish P1 product acceptance.
