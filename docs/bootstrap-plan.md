@@ -1,6 +1,6 @@
 # Bootstrap plan: a factory that can build its next feature
 
-Status: proposed implementation plan. No product implementation exists yet.
+Status: P0 accepted. P1–P6 remain planned. See the [P0 acceptance report](phase-reports/p0.md).
 
 Build one local CLI that takes one request, runs Codex in a Git worktree, independently verifies the result, and produces a PR. It must retain its state across process exits, pause for a human decision, and make a bounded repair attempt. Use this version to build subsequent factory features.
 
@@ -10,7 +10,7 @@ Every phase has two separate agents: a **backpressure agent** that builds and ru
 
 This plan follows [Software Factory Kernel v0.2](<Software Factory Kernel — Conceptual Specification v0.2.md>), especially sections 2, 11–24, 34–45, 53, and 60–78. It also follows the [Semantic Supervision addendum](<Software Factory Spec Addendum — Semantic Supervision and Jev.md>), especially sections 3, 10, 19, and 25–26.
 
-The workspace currently contains those two specifications. It has no application code, test harness, package manifest, or Git repository. Node, npm, Git, and GitHub CLI are visible on PATH. Codex CLI is not visible on PATH. Authentication, supported tool versions, and a target GitHub repository have not been checked. The user selected Codex CLI as the first worker.
+At planning time, the workspace contained only those two specifications. It had no application code, test harness, package manifest, or Git repository. P0 has since added the executable foundation and independent acceptance suite. Node, npm, Git, and GitHub CLI were visible during setup. Codex CLI was not visible on PATH. Authentication and a target GitHub repository have not been checked. The user selected Codex CLI as the first real worker for P1.
 
 There are three deliberate scheduling decisions:
 
@@ -118,7 +118,7 @@ Git worktrees provide separate working copies. They are not a security boundary.
 
 ## Phase sequence
 
-All phases below are planned, not completed. Each phase depends on the previous phase's acceptance report. Each is one end-to-end capability slice. The scope budget limits behavior and integration breadth, rather than setting an arbitrary line count.
+P0 is accepted. The remaining phases depend on the previous phase's acceptance report. Each is one end-to-end capability slice. The scope budget limits behavior and integration breadth, rather than setting an arbitrary line count.
 
 | Phase | Product capability | Separate backpressure agent builds | Spec roadmap mapping |
 |---|---|---|---|
@@ -144,11 +144,11 @@ All phases below are planned, not completed. Each phase depends on the previous 
 
 The exit gate requires these observations.
 
-- [ ] Valid input produces exactly one WorkUnit and reaches `VERIFIED` only after every required check passes.
-- [ ] A worker completion claim with failed verification cannot produce `VERIFIED` or delivery. Repairable failure may stop at `REPAIR_READY` until P4 supplies execution of repair.
-- [ ] Missing, duplicate, or unknown verification result IDs cannot substitute for required results. An empty verification contract is rejected for executable product work.
-- [ ] Direct `RUNNING → VERIFIED` and unresolved-decision bypasses are rejected.
-- [ ] Malformed input fails before worker invocation. Kernel-to-adapter import violations fail the architecture gate.
+- [x] Valid input produces exactly one WorkUnit and reaches `VERIFIED` only after every required check passes.
+- [x] A worker completion claim with failed verification cannot produce `VERIFIED` or delivery. Repairable failure may stop at `REPAIR_READY` until P4 supplies execution of repair.
+- [x] Missing, duplicate, or unknown verification result IDs cannot substitute for required results. An empty verification contract is rejected for executable product work.
+- [x] Direct `RUNNING → VERIFIED` and unresolved-decision bypasses are rejected.
+- [x] Malformed input fails before worker invocation. Kernel-to-adapter import violations fail the architecture gate.
 
 **Useful outcome:** A runnable executable specification that can judge the next implementation slice.
 
@@ -372,15 +372,15 @@ The later sequence is a backlog, not a requirement to implement before self-host
 
 Jev remains optional. A semantic assessment can request investigation or additional verification under policy. It cannot mark work verified, resolve protected human decisions, or replace the deterministic acceptance checks.
 
-## First execution handoff
+## P0 execution handoff — completed
 
-Start P0 with the following work, then stop at its acceptance gate before expanding scope.
+P0 completed this handoff and passed its acceptance gate. P1 has not started.
 
-- [ ] Coordinator establishes the initial Git baseline and pins the P0 public CLI/fixture contract.
-- [ ] `BP-0` builds the runnable stub and toolchain, executable harness, requirement map, pass sanity case, and dishonest-worker rejection case.
-- [ ] `BP-0` records meaningful red evidence and hands over the frozen acceptance bundle.
-- [ ] `PRODUCT-0` implements the smallest CLI-to-verdict path.
-- [ ] `BP-0` independently reruns the candidate and records the phase result.
-- [ ] Coordinator accepts P0 only after all required checks pass.
+- [x] Coordinator establishes the initial Git baseline and pins the P0 public CLI/fixture contract.
+- [x] `BP-0` builds the runnable stub and toolchain, executable harness, requirement map, pass sanity case, and dishonest-worker rejection case.
+- [x] `BP-0` records meaningful red evidence and hands over the frozen acceptance bundle.
+- [x] `PRODUCT-0` implements the smallest CLI-to-verdict path.
+- [x] `BP-0` independently reruns the candidate and records the phase result.
+- [x] Coordinator accepts P0 only after all required checks pass.
 
 Before P1, locate or install Codex CLI, confirm authentication without exposing credentials, and prove its non-interactive structured outcome and process termination behavior in a disposable fixture. Before P3, identify the GitHub repository and authorized human resolver. Before P5, record the required CI checks and delivery policy. These are implementation prerequisites; they do not block planning or the offline P0 slice.

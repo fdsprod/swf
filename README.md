@@ -34,4 +34,4 @@ The project is one npm package. `src/contracts` owns protocol types, schemas, an
 
 Commands in fixtures are opaque labels. P0 does not execute commands, invoke Codex, edit a repository, persist runs, resume decisions, or create PRs. All state and events last for one process. The next phase adds a real worktree, Codex CLI, and factory-owned command verification.
 
-See the [bootstrap plan](docs/bootstrap-plan.md), [public P0 contract](tests/spec/p0-contract.md), and [bootstrap boundaries ADR](docs/adr/bootstrap-boundaries.md).
+See the [P0 acceptance report](docs/phase-reports/p0.md), [bootstrap plan](docs/bootstrap-plan.md), [public P0 contract](tests/spec/p0-contract.md), and [bootstrap boundaries ADR](docs/adr/bootstrap-boundaries.md).
