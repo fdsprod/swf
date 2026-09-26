@@ -43,16 +43,18 @@ The store pins the configuration, base commit, and total worker-start budget. Th
 
 To enable human decisions, configure `decisions` with a pinned GitHub CLI executable and the authorized resolver's numeric ID and login. The request must identify the matching GitHub repository and issue. The factory publishes a question and exits 0 while waiting. Run `resume` after the resolver posts the specified JSON answer. Conflicting answers stop continuation. The answer starts a fresh worker and cannot directly approve its work. See the [P3 contract](tests/spec/p3-contract.md).
 
-Run the cumulative P3 acceptance gate:
+To enable bounded repair in a durable local run, add `"repair": { "kind": "local_verification", "maxRepairs": 1 }` to the configuration. The default repair limit is one when the option is present. The repair worker receives the original failed verification and exact command output. It runs under the same checks and the separate total worker-start limit. Omitting `repair` preserves the existing stop at `REPAIR_READY`. See the [P4 contract](tests/spec/p4-contract.md).
+
+Run the cumulative P4 acceptance gate:
 
 ```powershell
-node tests/spec/p3/harness/run-gates.mjs
+node tests/spec/p4/harness/run-gates.mjs
 ```
 
-This includes decision publication and recovery, all earlier acceptance tests, a live Codex call, native sandbox probes, typecheck, build, and architecture checks. Set `P1_CODEX_EXE` if the installed native executable differs from the harness default. Logs and the frozen bundle digest go under `.p3-proof/latest/`. The coordinator uses this trusted runner outside the product worktree with `FACTORY_CANDIDATE_ROOT` and `P3_PROOF_DIR`. Missing required [live P3 evidence](tests/spec/p3/LIVE.md) makes the gate fail even when all local checks pass. The offline P0 gate remains `node tests/spec/harness/run-gates.mjs`.
+This includes repair and decision recovery, all earlier acceptance tests, a live Codex call, native sandbox probes, typecheck, build, and architecture checks. Set `P1_CODEX_EXE` if the installed native executable differs from the harness default. Logs and the frozen bundle digest go under `.p4-proof/latest/`. The coordinator uses this trusted runner outside the product worktree with `FACTORY_CANDIDATE_ROOT` and `P4_PROOF_DIR`. Missing required [live P3 evidence](tests/spec/p3/LIVE.md) makes the gate fail even when all local checks pass. The offline P0 gate remains `node tests/spec/harness/run-gates.mjs`.
 
 The project is one npm package. `src/contracts` owns protocol types, schemas, and validation. `src/kernel` owns transitions and orchestration through separate worker and verifier ports. `src/adapters` supplies process, filesystem, sandbox, and scripted adapters. `src/cli` composes these modules. `tests/spec` contains the independently authored acceptance bundle.
 
-Commands in P0 fixtures remain opaque labels. Real verification commands use an executable and argument vector. Bounded local repair and PR delivery are being added in P4 and P5.
+Commands in P0 fixtures remain opaque labels. Real verification commands use an executable and argument vector. GitHub issue intake, PR delivery, and CI observation are being added in P5.
 
 See the [P3 local verification report](docs/phase-reports/p3.md), [P2 execution report](docs/phase-reports/p2.md), [P1 acceptance report](docs/phase-reports/p1.md), [P0 acceptance report](docs/phase-reports/p0.md), [bootstrap plan](docs/bootstrap-plan.md), and [execution boundaries](docs/adr/local-execution.md).
