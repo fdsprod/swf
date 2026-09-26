@@ -1,6 +1,6 @@
 # Bootstrap plan: a factory that can build its next feature
 
-Status: P0 accepted. P1–P6 remain planned. See the [P0 acceptance report](phase-reports/p0.md).
+Status: P0 accepted. P1 is in progress. The user authorized continuation through P5. P6 remains planned. See the [P0 acceptance report](phase-reports/p0.md).
 
 Build one local CLI that takes one request, runs Codex in a Git worktree, independently verifies the result, and produces a PR. It must retain its state across process exits, pause for a human decision, and make a bounded repair attempt. Use this version to build subsequent factory features.
 
@@ -10,7 +10,7 @@ Every phase has two separate agents: a **backpressure agent** that builds and ru
 
 This plan follows [Software Factory Kernel v0.2](<Software Factory Kernel — Conceptual Specification v0.2.md>), especially sections 2, 11–24, 34–45, 53, and 60–78. It also follows the [Semantic Supervision addendum](<Software Factory Spec Addendum — Semantic Supervision and Jev.md>), especially sections 3, 10, 19, and 25–26.
 
-At planning time, the workspace contained only those two specifications. It had no application code, test harness, package manifest, or Git repository. P0 has since added the executable foundation and independent acceptance suite. Node, npm, Git, and GitHub CLI were visible during setup. Codex CLI was not visible on PATH. Authentication and a target GitHub repository have not been checked. The user selected Codex CLI as the first real worker for P1.
+At planning time, the workspace contained only those two specifications. It had no application code, test harness, package manifest, or Git repository. P0 has since added the executable foundation and independent acceptance suite. Node, npm, Git, and GitHub CLI are available. P1 setup confirmed Codex CLI 0.157.1 with ChatGPT authentication and GitHub CLI authentication as `fdsprod`. A target GitHub repository is still needed for P3 and P5. The user selected Codex CLI as the first real worker for P1.
 
 There are three deliberate scheduling decisions:
 
@@ -374,7 +374,7 @@ Jev remains optional. A semantic assessment can request investigation or additio
 
 ## P0 execution handoff — completed
 
-P0 completed this handoff and passed its acceptance gate. P1 has not started.
+P0 completed this handoff and passed its acceptance gate. P1 has started with independent learning probes and acceptance-contract design.
 
 - [x] Coordinator establishes the initial Git baseline and pins the P0 public CLI/fixture contract.
 - [x] `BP-0` builds the runnable stub and toolchain, executable harness, requirement map, pass sanity case, and dishonest-worker rejection case.
