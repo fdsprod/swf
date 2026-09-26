@@ -110,6 +110,16 @@ The common acceptance rules apply to every phase.
 - [ ] The report records baseline and candidate revisions, requirement IDs, test-bundle digest, commands, exit codes, expected failures, logs, and artifact references.
 - [ ] Missing, skipped, timed-out, or unavailable required checks block acceptance. Record infrastructure failures separately from product failures.
 
+The user authorized continued implementation through P5. If a required live
+exercise waits on an external destination or human answer, local implementation
+of later phases can continue after all runnable checks for the prior candidate
+pass independently. Record that candidate as an unaccepted baseline, then run
+the next phase's committed red tests before implementation. This permits local
+work to continue; it does not waive a live gate, accept a phase, or authorize
+remote actions without a selected destination. Cumulative reports must retain
+the missing live gate as blocked. P3 through P5 remain unaccepted until all
+required inherited and phase-specific evidence passes.
+
 During P0, the coordinator initializes Git and records the baseline. `BP-0` supplies the minimal runnable CLI stub and toolchain needed to exercise the agreed public interface. The stub returns a well-formed `not_implemented` result. Acceptance must fail because the required behavior is absent, not because the executable cannot start. This scaffold contains no kernel behavior. The product agent replaces the stub after the red result is recorded.
 
 Keep the authoritative acceptance bundle outside the product agent's writable worktree. The runner uses its own pinned command rather than trusting a candidate-modified `npm test` script alone. Product tests remain useful additional evidence. If a phase changes the verifier itself, the last accepted verifier and the external harness still judge the candidate.
