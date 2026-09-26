@@ -1,0 +1,88 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://swf.local/schemas/p3/decision-worker-input.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "runId",
+    "attemptId",
+    "workspace",
+    "context"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "runId": {
+      "type": "string",
+      "pattern": "\\S"
+    },
+    "attemptId": {
+      "type": "string",
+      "pattern": "\\S"
+    },
+    "workspace": {
+      "$ref": "https://swf.local/schemas/p1/local-result.schema.json#/definitions/workspace"
+    },
+    "context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "request",
+        "unit",
+        "priorAttempts",
+        "decisions",
+        "evidence",
+        "repositoryContext"
+      ],
+      "properties": {
+        "request": {
+          "$ref": "https://swf.local/schemas/p0/run-fixture.schema.json#/definitions/workRequest"
+        },
+        "unit": {
+          "$ref": "https://swf.local/schemas/p0/cli-result.schema.json#/definitions/unit"
+        },
+        "priorAttempts": {
+          "type": "array",
+          "items": {
+            "$ref": "https://swf.local/schemas/p2/durable-result.schema.json#/definitions/attempt"
+          }
+        },
+        "decisions": {
+          "type": "array",
+          "items": {
+            "$ref": "https://swf.local/schemas/p2/durable-result.schema.json#/definitions/decisionResolution"
+          }
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "https://swf.local/schemas/p0/run-fixture.schema.json#/definitions/evidenceRef"
+          }
+        },
+        "repositoryContext": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "path",
+              "baseCommit"
+            ],
+            "properties": {
+              "path": {
+                "type": "string",
+                "pattern": "\\S"
+              },
+              "baseCommit": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{40,64}$"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

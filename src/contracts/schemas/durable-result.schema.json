@@ -80,7 +80,10 @@
             "config_mismatch",
             "corrupt_store",
             "artifact_invalid",
-            "ownership_uncertain"
+            "ownership_uncertain",
+            "decision_gateway_error",
+            "publication_uncertain",
+            "decision_conflict"
           ]
         },
         "issues": {
@@ -711,6 +714,121 @@
               "pattern": "\\S"
             }
           }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "decisionId",
+            "publication"
+          ],
+          "properties": {
+            "type": {
+              "const": "DecisionPublicationPlanned"
+            },
+            "decisionId": {
+              "type": "string",
+              "pattern": "\\S"
+            },
+            "publication": {
+              "$ref": "#/definitions/decisionPublication"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "decisionId",
+            "operationId"
+          ],
+          "properties": {
+            "type": {
+              "const": "DecisionPublicationStarted"
+            },
+            "decisionId": {
+              "type": "string",
+              "pattern": "\\S"
+            },
+            "operationId": {
+              "type": "string",
+              "pattern": "\\S"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "decisionId",
+            "operationId",
+            "receipt"
+          ],
+          "properties": {
+            "type": {
+              "const": "DecisionPublished"
+            },
+            "decisionId": {
+              "type": "string",
+              "pattern": "\\S"
+            },
+            "operationId": {
+              "type": "string",
+              "pattern": "\\S"
+            },
+            "receipt": {
+              "$ref": "#/definitions/decisionReceipt"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "decisionId",
+            "conflict"
+          ],
+          "properties": {
+            "type": {
+              "const": "DecisionConflictObserved"
+            },
+            "decisionId": {
+              "type": "string",
+              "pattern": "\\S"
+            },
+            "conflict": {
+              "$ref": "#/definitions/decisionConflict"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "decisionId",
+            "resolution",
+            "source"
+          ],
+          "properties": {
+            "type": {
+              "const": "DecisionResolved"
+            },
+            "decisionId": {
+              "type": "string",
+              "pattern": "\\S"
+            },
+            "resolution": {
+              "$ref": "#/definitions/decisionResolution"
+            },
+            "source": {
+              "$ref": "#/definitions/decisionReceipt"
+            }
+          }
         }
       ]
     },
@@ -793,8 +911,340 @@
         "baseCommit": {
           "type": "string",
           "pattern": "^[a-f0-9]{40,64}$"
+        },
+        "decisions": {
+          "type": "array",
+          "minItems": 0,
+          "items": {
+            "$ref": "#/definitions/decisionRecord"
+          }
         }
       }
+    },
+    "githubIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "login"
+      ],
+      "properties": {
+        "id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "login": {
+          "type": "string",
+          "pattern": "\\S"
+        }
+      }
+    },
+    "commentIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "url",
+        "author",
+        "createdAt",
+        "updatedAt"
+      ],
+      "properties": {
+        "id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "url": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "author": {
+          "$ref": "#/definitions/githubIdentity"
+        },
+        "createdAt": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "updatedAt": {
+          "type": "string",
+          "pattern": "\\S"
+        }
+      }
+    },
+    "decisionPublication": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "operationId",
+        "publisher",
+        "body"
+      ],
+      "properties": {
+        "operationId": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "publisher": {
+          "$ref": "#/definitions/githubIdentity"
+        },
+        "body": {
+          "$ref": "#/definitions/artifact"
+        }
+      }
+    },
+    "decisionReceipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "comment",
+        "record"
+      ],
+      "properties": {
+        "comment": {
+          "$ref": "#/definitions/commentIdentity"
+        },
+        "record": {
+          "$ref": "#/definitions/artifact"
+        }
+      }
+    },
+    "decisionConflict": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "comments",
+        "record"
+      ],
+      "properties": {
+        "comments": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "$ref": "#/definitions/commentIdentity"
+          }
+        },
+        "record": {
+          "$ref": "#/definitions/artifact"
+        }
+      }
+    },
+    "decisionResolution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "decisionId",
+        "answer",
+        "basis",
+        "evidence",
+        "resolvedAt"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "decisionId": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "answer": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "basis": {
+          "const": "human"
+        },
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "../p0/run-fixture.schema.json#/definitions/evidenceRef"
+          }
+        },
+        "resolvedAt": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "selectedOptionId": {
+          "type": "string",
+          "pattern": "\\S"
+        }
+      }
+    },
+    "decisionRecord": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "attemptId",
+            "request",
+            "kind"
+          ],
+          "properties": {
+            "attemptId": {
+              "type": "string",
+              "pattern": "\\S"
+            },
+            "request": {
+              "$ref": "../p0/run-fixture.schema.json#/definitions/decisionRequest"
+            },
+            "kind": {
+              "const": "requested"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "attemptId",
+            "request",
+            "kind",
+            "publication"
+          ],
+          "properties": {
+            "attemptId": {
+              "type": "string",
+              "pattern": "\\S"
+            },
+            "request": {
+              "$ref": "../p0/run-fixture.schema.json#/definitions/decisionRequest"
+            },
+            "kind": {
+              "const": "publication_planned"
+            },
+            "publication": {
+              "$ref": "#/definitions/decisionPublication"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "attemptId",
+            "request",
+            "kind",
+            "publication"
+          ],
+          "properties": {
+            "attemptId": {
+              "type": "string",
+              "pattern": "\\S"
+            },
+            "request": {
+              "$ref": "../p0/run-fixture.schema.json#/definitions/decisionRequest"
+            },
+            "kind": {
+              "const": "publication_started"
+            },
+            "publication": {
+              "$ref": "#/definitions/decisionPublication"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "attemptId",
+            "request",
+            "publication",
+            "receipt",
+            "kind"
+          ],
+          "properties": {
+            "attemptId": {
+              "type": "string",
+              "pattern": "\\S"
+            },
+            "request": {
+              "$ref": "../p0/run-fixture.schema.json#/definitions/decisionRequest"
+            },
+            "publication": {
+              "$ref": "#/definitions/decisionPublication"
+            },
+            "receipt": {
+              "$ref": "#/definitions/decisionReceipt"
+            },
+            "kind": {
+              "const": "published"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "attemptId",
+            "request",
+            "publication",
+            "receipt",
+            "kind",
+            "conflict"
+          ],
+          "properties": {
+            "attemptId": {
+              "type": "string",
+              "pattern": "\\S"
+            },
+            "request": {
+              "$ref": "../p0/run-fixture.schema.json#/definitions/decisionRequest"
+            },
+            "publication": {
+              "$ref": "#/definitions/decisionPublication"
+            },
+            "receipt": {
+              "$ref": "#/definitions/decisionReceipt"
+            },
+            "kind": {
+              "const": "conflicted"
+            },
+            "conflict": {
+              "$ref": "#/definitions/decisionConflict"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "attemptId",
+            "request",
+            "publication",
+            "receipt",
+            "kind",
+            "resolution",
+            "source"
+          ],
+          "properties": {
+            "attemptId": {
+              "type": "string",
+              "pattern": "\\S"
+            },
+            "request": {
+              "$ref": "../p0/run-fixture.schema.json#/definitions/decisionRequest"
+            },
+            "publication": {
+              "$ref": "#/definitions/decisionPublication"
+            },
+            "receipt": {
+              "$ref": "#/definitions/decisionReceipt"
+            },
+            "kind": {
+              "const": "resolved"
+            },
+            "resolution": {
+              "$ref": "#/definitions/decisionResolution"
+            },
+            "source": {
+              "$ref": "#/definitions/decisionReceipt"
+            }
+          }
+        }
+      ]
     }
   }
 }

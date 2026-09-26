@@ -1,5 +1,6 @@
 import type { AgentOutcome, UnitExecutionState, VerificationResult, WorkGraph } from "./index.js";
 import type { Artifact, LocalEvidence, LocalWorkspace, ProcessRecord } from "./local.js";
+import type { DecisionFact, DecisionRecord } from "./decisions.js";
 
 export interface ProcessIdentity { pid: number; createdAt: string; executable: string }
 export interface AttemptIdentity { id: string; ordinal: number; completionPath: string }
@@ -24,6 +25,7 @@ export interface WorkerCompletion {
   outcome: AgentOutcome;
 }
 export type DurableFact =
+  | DecisionFact
   | { type: "RunCreated"; contract: LocalEvidence["contract"]; graph: WorkGraph; baseCommit: string; maxStarts: number }
   | { type: "WorkspacePlanned"; operationId: string; workspace: LocalWorkspace }
   | { type: "WorkspaceReady"; operationId: string }
@@ -48,8 +50,9 @@ export interface DurableProjection {
   workspace: WorkspaceOperation;
   attempts: DurableAttempt[];
   verification: VerificationOperation;
+  decisions?: DecisionRecord[];
 }
 export type DurableCliResult =
   | { kind: "durable_result" | "durable_status"; projection: DurableProjection; events: DurableEvent[] }
-  | { kind: "durable_error"; code: "input_error" | "store_busy" | "not_found" | "config_mismatch" | "corrupt_store" | "artifact_invalid" | "ownership_uncertain"; issues: string[] }
+  | { kind: "durable_error"; code: "input_error" | "store_busy" | "not_found" | "config_mismatch" | "corrupt_store" | "artifact_invalid" | "ownership_uncertain" | "decision_gateway_error" | "publication_uncertain" | "decision_conflict"; issues: string[] }
   | { kind: "not_implemented" };

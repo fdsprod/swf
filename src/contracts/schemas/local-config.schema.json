@@ -31,7 +31,57 @@
     "allowedPaths": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/definitions/text"}},
     "protectedPaths": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/definitions/text"}},
     "blockedReadPaths": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/definitions/text"}},
-    "verificationInputs": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/definitions/text"}}
+    "verificationInputs": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/definitions/text"}},
+    "decisions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "executable",
+        "prefixArgs",
+        "timeoutSeconds",
+        "authorizedResolver"
+      ],
+      "properties": {
+        "kind": {
+          "const": "github_issue_comments"
+        },
+        "executable": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "prefixArgs": {
+          "type": "array",
+          "minItems": 0,
+          "items": {
+            "type": "string"
+          }
+        },
+        "timeoutSeconds": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 300
+        },
+        "authorizedResolver": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "login"
+          ],
+          "properties": {
+            "id": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "login": {
+              "type": "string",
+              "pattern": "\\S"
+            }
+          }
+        }
+      }
+    }
   },
   "definitions": {
     "text": {"type": "string", "pattern": "\\S"},

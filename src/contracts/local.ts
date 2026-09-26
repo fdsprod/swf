@@ -1,4 +1,5 @@
 import type { AgentOutcome, FactoryEvent, VerificationContract, WorkGraph, WorkRequest, UnitExecutionState } from "./index.js";
+import type { DecisionConfig } from "./decisions.js";
 
 export interface LocalConfig {
   schemaVersion: 1;
@@ -14,6 +15,7 @@ export interface LocalConfig {
   protectedPaths: string[];
   blockedReadPaths: string[];
   verificationInputs: string[];
+  decisions?: DecisionConfig;
 }
 
 export interface LocalWorkspace { path: string; repositoryPath: string; baseCommit: string }
