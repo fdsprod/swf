@@ -44,7 +44,7 @@ if (!differences.length) {
   }
   execute('p3-sanity', ['--test', '--test-reporter=tap', join(trustedRoot, 'tests/spec/p3/harness/sanity.test.mjs')], { tests: true });
   execute('p3-acceptance', ['--test', '--test-reporter=tap', '--test-concurrency=1',
-    ...['decisions', 'recovery'].map(name => join(trustedRoot, `tests/spec/p3/scenarios/${name}.test.mjs`))], { timeout: 900000, tests: true });
+    ...['decisions', 'recovery', 'conflict-idempotency'].map(name => join(trustedRoot, `tests/spec/p3/scenarios/${name}.test.mjs`))], { timeout: 900000, tests: true });
   if (!preparation) execute('p3-live', [join(trustedRoot, 'tests/spec/p3/harness/live-proof.mjs')], {env:{P3_CANDIDATE_SOURCE_DIGEST:hash(JSON.stringify(sourcesBefore))}});
   else results.push({name:'p3-live',exitCode:1,classification:'blocked',reason:'Preparation is not acceptance. Real issue and actual authorized human resolution are required.'});
 }
