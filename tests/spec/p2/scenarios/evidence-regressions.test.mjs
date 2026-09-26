@@ -49,14 +49,24 @@ test('P2-010 active verifier death permits redispatch only after old owned insta
 
 function factoryDescendants(factoryPid) {
   assert.ok(Number.isSafeInteger(factoryPid) && factoryPid > 0);
-  const script = `$all = @(Get-CimInstance Win32_Process -OperationTimeoutSec 5); $frontier = @($all | Where-Object { $_.ProcessId -eq ${factoryPid} }); $seen = @{}; while ($frontier.Count -gt 0) { $next = @(); foreach ($parent in $frontier) { foreach ($entry in $all) { if ($entry.ParentProcessId -eq $parent.ProcessId -and $entry.CreationDate -ge $parent.CreationDate -and -not $seen.ContainsKey([int]$entry.ProcessId)) { $seen[[int]$entry.ProcessId] = $true; $next += $entry; Write-Output $entry.ProcessId } } }; $frontier = $next }`;
+  const script = `$all = @(Get-CimInstance Win32_Process -OperationTimeoutSec 5); $frontier = @($all | Where-Object { $_.ProcessId -eq ${factoryPid} }); $seen = @{}; $observed = @(); while ($frontier.Count -gt 0) { $next = @(); foreach ($parent in $frontier) { foreach ($entry in $all) { if ($entry.ParentProcessId -eq $parent.ProcessId -and $entry.CreationDate -ge $parent.CreationDate -and -not $seen.ContainsKey([int]$entry.ProcessId)) { $seen[[int]$entry.ProcessId] = $true; $next += $entry; $observed += [pscustomobject]@{ pid=[int]$entry.ProcessId; parentPid=[int]$entry.ParentProcessId; executable=$entry.ExecutablePath; commandLine=$entry.CommandLine; createdAt=$entry.CreationDate.ToUniversalTime().ToFileTimeUtc().ToString(); parentCreatedAt=$parent.CreationDate.ToUniversalTime().ToFileTimeUtc().ToString() } } } }; $frontier = $next }; ConvertTo-Json -InputObject @($observed) -Compress`;
   const observed = spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], { encoding: 'utf8', windowsHide: true, timeout: 10000 });
   assert.ifError(observed.error); assert.equal(observed.status, 0, observed.stderr);
-  return (observed.stdout.match(/\b\d+\b/g) || []).map(Number);
+  const processes = JSON.parse(observed.stdout); assert.ok(Array.isArray(processes));
+  return processes;
 }
 
 test('P2-011 WorkerStarted append failure cannot publish completion with an owned process alive', async () => withFixture({ worker: 'always-hang' }, async f => {
   const created = await fault(f, 'transaction.after_commit', 'RunCreated');
+  const before = assertSnapshot(readStore(f));
+  assert.equal(before.workspace.kind, 'unplanned'); assert.equal(before.attempts.length, 0); assert.deepEqual(ownedProcesses(f), []);
+  const nativeConsolePath = join(process.env.SystemRoot || process.env.SYSTEMROOT, 'System32', 'conhost.exe').toLowerCase();
+  const consoleSignature = process => JSON.stringify([process.executable.toLowerCase(), process.commandLine.toLowerCase()]);
+  const preWorkerConsoles = factoryDescendants(created.child.pid).filter(process => process.parentPid === created.child.pid
+    && process.executable?.toLowerCase() === nativeConsolePath
+    && process.commandLine?.toLowerCase() === `\\??\\${nativeConsolePath} 0x4`);
+  const consoleSignatures = new Set(preWorkerConsoles.map(consoleSignature));
+  console.log('P2 pre-worker console control: ' + JSON.stringify(preWorkerConsoles));
   await killFactory(created); assert.deepEqual(ownedProcesses(f), []);
   const db = new DatabaseSync(join(f.store, 'run.sqlite'));
   try {
@@ -67,7 +77,10 @@ test('P2-011 WorkerStarted append failure cannot publish completion with an owne
     if (await boundaryOrExit(resuming, 55000)) {
       assert.equal(JSON.parse(readFileSync(resuming.marker, 'utf8')).point, 'worker.after_completion_artifact');
       assert.deepEqual(ownedProcesses(f), [], 'A completion artifact cannot precede cleanup of live fixture-specific worker processes');
-      assert.deepEqual(factoryDescendants(resuming.handle.child.pid), [], 'A completion artifact cannot precede supervisor and descendant cleanup');
+      // Exclude only the exact native console host path/argv already observed before this run had a workspace or attempt.
+      const candidateProcesses = factoryDescendants(resuming.handle.child.pid).filter(process => !(process.parentPid === resuming.handle.child.pid
+        && process.executable && process.commandLine && consoleSignatures.has(consoleSignature(process))));
+      assert.deepEqual(candidateProcesses, [], 'A completion artifact cannot precede worker supervisor and descendant cleanup');
     } else {
       const observed = decode(resuming.handle);
       assert.ok(observed.result.kind === 'durable_error' || (observed.result.kind === 'durable_result' && observed.result.projection.state.status === 'FAILED'), 'Storage failure must remain a structured failure');
