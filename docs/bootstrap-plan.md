@@ -384,7 +384,7 @@ Jev remains optional. A semantic assessment can request investigation or additio
 
 ## P0 execution handoff — completed
 
-P0 completed this handoff and passed its acceptance gate. P1 and P2 also passed their independent acceptance gates. P3 is next.
+P0 completed this handoff and passed its acceptance gate. P1 and P2 also passed their independent acceptance gates. P3 passed every runnable independent check, with live proof still blocked. P4 implementation and P5 preparation are in progress.
 
 - [x] Coordinator establishes the initial Git baseline and pins the P0 public CLI/fixture contract.
 - [x] `BP-0` builds the runnable stub and toolchain, executable harness, requirement map, pass sanity case, and dishonest-worker rejection case.
@@ -393,4 +393,4 @@ P0 completed this handoff and passed its acceptance gate. P1 and P2 also passed 
 - [x] `BP-0` independently reruns the candidate and records the phase result.
 - [x] Coordinator accepts P0 only after all required checks pass.
 
-Before P1, locate or install Codex CLI, confirm authentication without exposing credentials, and prove its non-interactive structured outcome and process termination behavior in a disposable fixture. Before P3, identify the GitHub repository and authorized human resolver. Before P5, record the required CI checks and delivery policy. These are implementation prerequisites; they do not block planning or the offline P0 slice.
+P1 established Codex authentication, structured outcomes, and process termination in disposable fixtures. The P3 live exercise still needs a selected GitHub repository and authorized human resolver. The P5 live exercise also needs required CI checks and delivery policy. Local implementation can continue under the evidence policy above. Missing live inputs still block formal acceptance.
