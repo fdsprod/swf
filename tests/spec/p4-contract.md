@@ -1,6 +1,6 @@
 # P4 bounded local repair
 
-Status: independent preparation on P3 public contracts. This is not accepted P4, and scaffold failures are not definitive red against accepted P3. The coordinator must integrate accepted P3, record committed behavioral red, and freeze the bundle before PRODUCT-4 implementation.
+Status: independent preparation on P3 public contracts. This is not accepted P4, and scaffold failures are not definitive red. Before PRODUCT-4 implementation, the exact prior P3 candidate must independently pass every runnable gate. Required live evidence may remain explicitly blocked; that baseline is not accepted. The coordinator records committed behavioral red and freezes the new bundle before handoff.
 
 ## Configuration and compatibility
 
@@ -36,4 +36,4 @@ Reuse P2 transaction hooks for `RepairReserved` and `VerificationCompleted`. Bot
 
 Run `node tests/spec/p4/harness/run-gates.mjs` from the pinned trusted checkout with `FACTORY_CANDIDATE_ROOT` pointing to the candidate. `P4_PROOF_DIR` selects the evidence directory. The runner includes accepted P3/P2/P1/P0 gates, including their required live proofs, then P4 sanity and scenarios. It records revisions, commands, logs, frozen-bundle digest and before/after source hashes; missing, skipped or cancelled checks block acceptance.
 
-`--preparation` runs typecheck, build, sanity and draft P4 scenarios only. Its report always has `accepted:false` and names accepted-baseline integration as blocked. It is useful preparation evidence, not permission to advance the phase.
+`--preparation` runs typecheck, build, sanity and draft P4 scenarios only. Its report always has `accepted:false`. Scaffold failures are preparation evidence only. For definitive new-phase red, integrate the exact independently validated prior candidate with the new public contract, run the focused P4 suite plus typecheck/build, and retain unchanged source/bundle hashes and the prior cumulative report. This does not require another expensive prior cumulative run solely to establish red. Required live gates remain mandatory and explicitly blocked when unavailable. Final acceptance still requires the independent full cumulative gate above.
