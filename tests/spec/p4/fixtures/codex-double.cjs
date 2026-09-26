@@ -3,7 +3,8 @@ const [mode,...args]=process.argv.slice(2),flag=n=>args.includes(n)?args[args.in
 const cwd=flag('-C')||flag('--cd')||process.cwd();
 const raw=args.at(-1)==='-'?fs.readFileSync(0,'utf8'):args.at(-1);
 const input=JSON.parse(raw);if(input.schemaVersion!==1||!input.attemptId||!input.runId||!input.context?.unit)throw Error('Structured fresh context required');
-const row={pid:process.pid,threadId:crypto.randomUUID(),args,input,deliveryEnvironment:['GH_TOKEN','GITHUB_TOKEN','GIT_ASKPASS','SSH_AUTH_SOCK','SWF_TEST_FAULT'].filter(k=>process.env[k])};
+const partialPath=path.join(cwd,'src/p4-repair-partial.txt');
+const row={pid:process.pid,threadId:crypto.randomUUID(),args,input,partialBefore:fs.existsSync(partialPath)?fs.readFileSync(partialPath,'utf8'):null,deliveryEnvironment:['GH_TOKEN','GITHUB_TOKEN','GIT_ASKPASS','SSH_AUTH_SOCK','SWF_TEST_FAULT'].filter(k=>process.env[k])};
 fs.appendFileSync(path.join(cwd,'src/p4-contexts.jsonl'),JSON.stringify(row)+'\n');
 const repair=input.context.repair,decisions=input.context.decisions;
 const question={kind:'decision_required',decision:{question:'Which value should the module export?',reason:'Preserve human authority during repair.',options:[{id:'forty-two',description:'Export 42.',consequences:['The answer is 42.']}],impact:['Changes the fixture answer.'],reversible:true}};
@@ -17,6 +18,10 @@ else if(repair){
   for(const c of repair.commands){for(const s of ['stdout','stderr']){const b=Buffer.from(c[s+'Base64'],'base64');if(crypto.createHash('sha256').update(b).digest('hex')!==c.process[s].digest)throw Error('Captured output digest mismatch');}
     if(c.process.termination.kind==='exited'&&c.process.termination.exitCode===7){const out=Buffer.from(c.stdoutBase64,'base64').toString('utf8'),err=Buffer.from(c.stderrBase64,'base64').toString('utf8');if(!/failure-token:[a-f0-9-]+/.test(out)||!out.includes('raw-output:\u0000\u03bb\r\n')||!err.includes('Expected 42; observed 0'))throw Error('Exact observed failure missing');failed=true;}}
   if(!failed||fs.readFileSync(path.join(cwd,'src/preserved.txt'),'utf8')!=='keep-first-edit')throw Error('Failure or existing edit lost');
+  if(mode==='repair-interrupt'){
+    if(!fs.existsSync(partialPath)){fs.writeFileSync(partialPath,'partial repair must survive');setInterval(()=>{},1000);return;}
+    if(fs.readFileSync(partialPath,'utf8')!=='partial repair must survive')throw Error('Interrupted repair edits changed');
+  }
   if(mode!=='always-fail')fs.writeFileSync(path.join(cwd,'src/answer.cjs'),'module.exports = 42;\n');
 }else{fs.writeFileSync(path.join(cwd,'src/preserved.txt'),'keep-first-edit');fs.writeFileSync(path.join(cwd,'src/answer.cjs'),'module.exports = 0;\n');}
 const response=mode.startsWith('decision-')?{outcome}:outcome;

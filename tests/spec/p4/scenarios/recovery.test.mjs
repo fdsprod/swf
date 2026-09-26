@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {appendFileSync,readFileSync,writeFileSync} from 'node:fs';
+import {appendFileSync,existsSync,readFileSync,writeFileSync} from 'node:fs';
 import {join} from 'node:path';
-import {withFixture,resume,fault,killFactory,readStore,contexts,assertContext,resumeArgs,assertError,ownedProcesses} from '../harness/support.mjs';
+import {withFixture,resume,fault,killFactory,readStore,contexts,assertContext,resumeArgs,assertError,ownedProcesses,start,waitFor} from '../harness/support.mjs';
 import {assertDurable,assertSnapshot,assertArtifacts} from '../harness/replay.mjs';
 
 for(const point of ['transaction.after_event_insert','transaction.after_projection_write'])test(`P4-004: ${point} rolls both repair and worker reservations back together`,async()=>withFixture(async f=>{
@@ -22,6 +22,16 @@ test('P4-004: restart at durable failed verification retains its exact failure e
   const held=await fault(f,'transaction.after_commit','VerificationCompleted');await killFactory(held);
   const before=readStore(f);assertSnapshot(before);assert.equal(before.projection.state.status,'REPAIR_READY');assertArtifacts(before.projection);
   const p=assertDurable(resume(f),f,'VERIFIED');assert.equal(p.attempts.length,2);assert.deepEqual(p.repairs[0].evidence,before.projection.verification.evidence);assertContext(contexts(f)[1],p,readStore(f).events);
+}));
+
+test('P4-004: dispatched repair interruption preserves edits and origin while consuming only total starts',async()=>withFixture({worker:'repair-interrupt'},async f=>{
+  const first=await fault(f,'transaction.after_commit','VerificationCompleted');await killFactory(first);const workspace=readStore(f).projection.workspace.workspace.path;
+  const partial=join(workspace,'src/p4-repair-partial.txt'),repair=start(f,resumeArgs(f));
+  await waitFor(()=>{assert.equal(repair.closed,false,'Repair fixture must stay alive after its partial edit');return existsSync(partial);},'Dispatched repair did not make its partial edit');
+  assert.equal(readFileSync(partial,'utf8'),'partial repair must survive');const active=contexts(f);assert.equal(active.length,2);assert.ok(ownedProcesses(f).includes(active[1].pid));
+  await killFactory(repair);await waitFor(()=>ownedProcesses(f).length===0,'Interrupted owned repair processes did not stop');
+  const p=assertDurable(resume(f),f,'VERIFIED');assert.equal(p.repairs.length,1);assert.equal(p.attempts.length,3);assert.equal(p.attempts[1].kind,'interrupted');
+  const rows=contexts(f);assert.equal(rows.length,3);assert.equal(rows[2].partialBefore,'partial repair must survive');assert.deepEqual(rows[2].input.context.repair,rows[1].input.context.repair);for(const row of rows)assertContext(row,p,readStore(f).events);assertArtifacts(p);
 }));
 
 for(const defect of ['manifest','stdout','contract','forbidden-tree'])test(`P4-006: ${defect} corruption cannot trigger repair`,async()=>withFixture(async f=>{

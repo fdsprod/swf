@@ -26,6 +26,8 @@ For repair-enabled runs, use the existing P3 `DecisionWorkerInput` structured en
 
 Include the unchanged request/unit, every prior attempt excluding the current reservation, all accepted human resolutions, prior evidence references and original repository context. Preserve this repair context through interruption and a human wait. A later repair uses its own newly measured failure. Validate the current candidate against the failed snapshot before the initial repair dispatch; after a repair has started, old failure snapshots remain historical evidence and must not be mistaken for a requirement that the workspace never change again.
 
+The current worker's origin is the latest `RepairReserved` at or before its reservation, including an ordinary continuation reservation. It cannot omit that origin or select an older failed verification. Validate the manifest and command artifacts of every historical repair source on every resume, including after a newer successful verification. A corrupted old failure is still `artifact_invalid`.
+
 All worker restrictions and verifier integrity rules remain in force. Repair cannot weaken required checks, change the contract or authorize a protected decision. Completion is still only a claim; run the original trusted verifier after every completed repair worker.
 
 ## Acceptance and fault boundaries
