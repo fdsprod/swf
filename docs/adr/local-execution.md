@@ -1,6 +1,6 @@
 # Local execution and recovery boundaries
 
-Status: P1 accepted. P2 recovery acceptance remains pending.
+Status: P1 and P2 accepted. Later phase reports track delivery and live proof.
 
 The bootstrap targets one Windows operator and approved local repositories. A
 Git worktree separates changes. It does not restrict access by itself. The
@@ -35,8 +35,8 @@ termination before accepting a candidate snapshot or launching the next stage.
 
 The learning probe showed that `taskkill /T` cannot find such descendants after
 the parent exits. A timeout on the immediate process alone therefore cannot
-establish a stable candidate. P2 must also test termination after the factory
-process itself dies.
+establish a stable candidate. P2 acceptance also checks termination after the
+factory process itself dies.
 
 ## Durable ownership
 
@@ -53,3 +53,17 @@ conservative consumption when a crash leaves dispatch uncertain.
 See the [SQLite observations](../research/p2-sqlite.md). The learning scripts are
 retained under `tests/learning/`. Separate acceptance tests must prove that the
 factory applies these mechanisms correctly.
+
+## GitHub delivery boundary
+
+P5 uses a factory-owned Git directory and index for candidate conversion and
+delivery. Initial checkout also excludes configured hooks and inherited
+attributes. Filtered base reads and diff capture use the same controlled
+policy. Delivery requires checkout bytes and Git modes to match the verified
+candidate. Source HEAD and its ordinary index stay unchanged.
+
+The factory uses the pinned target and a create-only push. It retains intent
+before remote effects and reconciles uncertain results on resume. The worker
+does not receive delivery credentials. Local Git probes and acceptance tests
+do not replace the required real HTTPS credential and recovery exercise. See
+the [P5 report](../phase-reports/p5.md) for its current proof status.
