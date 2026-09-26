@@ -1,3 +1,4 @@
+import { deliveryFact } from "./delivery.js";
 import type { DurableEvent, DurableProjection, DurableFact, DurableAttempt } from "../contracts/durable.js";
 import type { UnitExecutionState, VerificationResult, WorkUnit } from "../contracts/index.js";
 
@@ -30,6 +31,10 @@ export function replay(events: DurableEvent[]): DurableProjection {
       const graph = { id: `${request.id}:graph`, requestId: request.id, units: [unit], dependencies: [] };
       requireFact(event.runId !== request.id && stable(fact.graph) === stable(graph), "Invalid run graph");
       p = { schemaVersion: 1, runId: event.runId, sequence: event.sequence, contract: fact.contract, graph, baseCommit: fact.baseCommit, maxStarts: fact.maxStarts, state: { status: "PENDING", unit }, workspace: { kind: "unplanned" }, attempts: [], verification: { kind: "idle" } };
+      if (fact.intake) {
+        requireFact(fact.intake.base.sha === p.baseCommit && fact.intake.base.branch === fact.intake.input.baseBranch, "Intake base differs from run");
+        p = { ...p, intake: fact.intake, delivery: { kind: "unplanned" }, ci: { kind: "unobserved" } };
+      }
       if (fact.contract.config.decisions) p.decisions = [];
       if (fact.contract.config.repair) p.repairs = [];
       continue;
@@ -40,6 +45,8 @@ export function replay(events: DurableEvent[]): DurableProjection {
     const identity = (a: DurableAttempt) => ({ id: a.id, ordinal: a.ordinal, completionPath: a.completionPath });
     const replace = (a: DurableAttempt): void => { p!.attempts[p!.attempts.length - 1] = a; };
     switch (fact.type) {
+      case "DeliveryPlanned": case "CommitCreated": case "PushStarted": case "PushConfirmed": case "PrPlanned": case "PrStarted": case "PrCreated": case "PullRequestObserved": case "CiObserved":
+        requireFact(p.intake, "Delivery fact on local run"); deliveryFact(p as Extract<DurableProjection, { intake: object }>, fact, operation); break;
       case "RepairReserved": {
         requireFact(p.contract.config.repair && p.repairs && p.state.status === "REPAIR_READY" && p.verification.kind === "completed", "Repair requires completed failed verification");
         requireFact(p.repairs.length < (p.contract.config.repair.maxRepairs ?? 1) && p.attempts.length < p.maxStarts, "Repair budget exhausted");

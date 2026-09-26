@@ -12,7 +12,9 @@ ajv.addSchema(fixtureSchema);
 const validate = ajv.compile<LocalConfig>(configSchema);
 const relativePath = (s: string): boolean => !!s && !isAbsolute(s) && !s.includes("\\") && !s.split("/").some(p => p === ".." || p === ".") && !s.includes(":") && !s.includes("\0");
 export async function readConfig(path: string): Promise<{ config: LocalConfig; baseCommit: string; commonGit: string }> {
-  const value: unknown = JSON.parse(await readFile(path, "utf8"));
+  return prepareConfig(JSON.parse(await readFile(path, "utf8")));
+}
+export async function prepareConfig(value: unknown): Promise<{ config: LocalConfig; baseCommit: string; commonGit: string }> {
   if (!validate(value)) throw new Error(ajv.errorsText(validate.errors));
   const config = value;
   if (config.decisions) {

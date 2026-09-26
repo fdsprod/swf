@@ -1,3 +1,7 @@
+import { auditIntake, githubInput, intakeGitHub } from "../adapters/github-intake.js";
+import { auditDelivery, deliver } from "../adapters/delivery.js";
+import { createGitWorkspace } from "../adapters/git-delivery.js";
+import type { GitHubIntake } from "../contracts/delivery.js";
 import { auditDecisions, handleDecision } from "../adapters/decision-gateway.js";
 import { randomUUID } from "node:crypto";
 import { mkdir, readFile, stat } from "node:fs/promises";
@@ -9,23 +13,23 @@ import { readConfig } from "../adapters/local-config.js";
 import { DurableError, exists, Faults, Store, storePath } from "../adapters/durable-store.js";
 import { checkArtifact, checkHistoryArtifacts, checkInitialRepairCandidate, checkRepairArtifacts, completion, performWorker, reconcileWorker, reconcileWorkspace, validateManifest, verificationFacts, verify } from "../adapters/durable-execution.js";
 
-function parse(args: string[]): { command: "run" | "resume" | "status"; store: string; local?: string; limit?: number } {
+function parse(args: string[]): { command: "run" | "resume" | "status"; store: string; local?: string; github?: string; limit?: number } {
   const command = args[0]; if (command !== "run" && command !== "resume" && command !== "status") throw new DurableError("input_error", "Unknown durable command");
   const options = new Map<string, string>(); let json = false;
   for (let i = 1; i < args.length; i++) {
     const key = args[i]!;
     if (key === "--json") { if (json) throw new DurableError("input_error", "Repeated --json argument"); json = true; continue; }
-    if (!["--store", ...(command === "run" ? ["--local", "--max-starts"] : [])].includes(key) || options.has(key) || !args[i + 1] || args[i + 1]!.startsWith("--")) throw new DurableError("input_error", `Invalid or repeated argument: ${key}`);
+    if (!["--store", ...(command === "run" ? ["--local", "--github", "--max-starts"] : [])].includes(key) || options.has(key) || !args[i + 1] || args[i + 1]!.startsWith("--")) throw new DurableError("input_error", `Invalid or repeated argument: ${key}`);
     options.set(key, args[++i]!);
   }
-  const store = options.get("--store"), local = options.get("--local"), limitText = options.get("--max-starts");
-  if (!json || !store || (command === "run" && !local)) throw new DurableError("input_error", "Required durable command arguments are missing");
+  const store = options.get("--store"), local = options.get("--local"), github = options.get("--github"), limitText = options.get("--max-starts");
+  if (!json || !store || (command === "run" && ((!local && !github) || (local && github)))) throw new DurableError("input_error", "Required durable command arguments are missing");
   let limit: number | undefined;
   if (limitText !== undefined) { limit = Number(limitText); if (!/^\d+$/.test(limitText) || !Number.isSafeInteger(limit) || limit < 1 || limit > 100) throw new DurableError("input_error", "Worker-start limit must be an integer from 1 through 100"); }
-  return { command, store, ...(local ? { local } : {}), ...(limit !== undefined ? { limit } : {}) };
+  return { command, store, ...(local ? { local } : {}), ...(github ? { github } : {}), ...(limit !== undefined ? { limit } : {}) };
 }
 async function pathExists(path: string): Promise<boolean> { try { await stat(path); return true; } catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") return false; throw error; } }
-async function checkPlacement(path: string, config: DurableProjection["contract"]["config"]): Promise<void> {
+async function checkPlacement(path: string, config: Pick<DurableProjection["contract"]["config"], "repositoryPath" | "workspaceRoot">): Promise<void> {
   for (const root of [config.repositoryPath, config.workspaceRoot]) if (within(await storePath(root), path)) throw new DurableError("input_error", "Store must be outside the repository and writable workspace root");
 }
 export async function durableCommand(args: string[]): Promise<DurableCliResult> {
@@ -34,30 +38,44 @@ export async function durableCommand(args: string[]): Promise<DurableCliResult> 
     const options = parse(args), faults = new Faults(), path = await storePath(options.store), hasDatabase = await exists(join(path, "run.sqlite"));
     if (options.command !== "run" && !hasDatabase) throw new DurableError("not_found", "No durable run exists at this store");
     let supplied: unknown;
-    if (options.local) {
-      try { supplied = JSON.parse(await readFile(options.local, "utf8")); }
+    if (options.local || options.github) {
+      try { supplied = JSON.parse(await readFile((options.local ?? options.github)!, "utf8")); }
       catch (error) { throw new DurableError("input_error", `Cannot read configuration: ${String(error)}`); }
     }
+    const proposedRunId = randomUUID();
+    let intake: GitHubIntake | undefined;
     let prepared: Awaited<ReturnType<typeof readConfig>> | undefined;
     if (!hasDatabase) {
-      try { prepared = await readConfig(options.local!); await checkPlacement(path, prepared.config); }
+      try {
+        if (options.github) {
+          const input = await githubInput(supplied); await checkPlacement(path, input.runtime);
+          ({ prepared, intake } = await intakeGitHub(input, proposedRunId));
+        } else prepared = await readConfig(options.local!);
+        await checkPlacement(path, prepared.config);
+      }
       catch (error) { if (error instanceof DurableError) throw error; throw new DurableError("input_error", String(error)); }
     }
     store = await Store.open(path, options.command !== "status", faults);
     let current = store.read().projection;
     if (!current) {
       if (options.command !== "run") throw new DurableError("not_found", "Store has no committed run");
-      prepared ??= await readConfig(options.local!); await checkPlacement(path, prepared.config);
-      const config = prepared.config, pinned = await programs(config), request = config.request;
+      if (!prepared) {
+        if (options.github) {
+          const input = await githubInput(supplied); await checkPlacement(path, input.runtime);
+          ({ prepared, intake } = await intakeGitHub(input, proposedRunId));
+        } else prepared = await readConfig(options.local!);
+      }
+      await checkPlacement(path, prepared.config);
+      const config = prepared.config, pinned = await programs(config, intake ? [intake.input.github.executable, intake.input.git.executable] : []), request = config.request;
       const unit = { id: `${request.id}:unit:1`, objective: request.objective, constraints: request.constraints, verification: config.verification, metadata: request.metadata };
-      current = await store.append(randomUUID(), { type: "RunCreated", contract: { digest: contractDigest(config, pinned), config, programs: pinned }, graph: { id: `${request.id}:graph`, requestId: request.id, units: [unit], dependencies: [] }, baseCommit: prepared.baseCommit, maxStarts: options.limit ?? 5 });
+      current = await store.append(proposedRunId, { type: "RunCreated", ...(intake ? { intake } : {}), contract: { digest: contractDigest(config, pinned), config, programs: pinned }, graph: { id: `${request.id}:graph`, requestId: request.id, units: [unit], dependencies: [] }, baseCommit: prepared.baseCommit, maxStarts: options.limit ?? 5 });
     }
     let p: DurableProjection = current;
     if (options.command === "status") { const result = store.read(); return { kind: "durable_status", projection: result.projection!, events: result.events }; }
     await checkPlacement(path, p.contract.config);
-    if (options.command === "run" && (stable(supplied) !== stable(p.contract.config) || (options.limit !== undefined && options.limit !== p.maxStarts))) throw new DurableError("config_mismatch", "Run configuration and worker-start limit are immutable");
+    if (options.command === "run" && (stable(supplied) !== stable(options.github ? p.intake?.input : p.contract.config) || (options.limit !== undefined && options.limit !== p.maxStarts))) throw new DurableError("config_mismatch", "Run configuration and worker-start limit are immutable");
     const append = async (fact: DurableFact): Promise<void> => { p = await store!.append(p.runId, fact); };
-    try { await checkHistoryArtifacts(p); await auditDecisions(p, store.read().events); await checkRepairArtifacts(p, store.read().events); } catch (error) { throw new DurableError("artifact_invalid", String(error)); }
+    try { await checkHistoryArtifacts(p); await auditDecisions(p, store.read().events); await checkRepairArtifacts(p, store.read().events); await auditIntake(p); await auditDelivery(p, store.read().events); } catch (error) { throw new DurableError("artifact_invalid", String(error)); }
     if (p.verification.kind === "completed") {
       try { await checkArtifact(p.verification.evidence); await validateManifest(p, p.verification.evidencePath); }
       catch (error) { throw new DurableError("artifact_invalid", String(error)); }
@@ -72,7 +90,8 @@ export async function durableCommand(args: string[]): Promise<DurableCliResult> 
         if (await pathExists(workspace.path)) await reconcileWorkspace(workspace);
         else {
           await mkdir(dirname(workspace.path), { recursive: true });
-          git(workspace.repositoryPath, "-c", "core.autocrlf=false", "worktree", "add", "--detach", workspace.path, p.baseCommit);
+          if (p.intake) await createGitWorkspace(p, workspace);
+          else git(workspace.repositoryPath, "-c", "core.autocrlf=false", "worktree", "add", "--detach", workspace.path, p.baseCommit);
           await faults.at("workspace.after_create", p.runId); await reconcileWorkspace(workspace);
         }
         await append({ type: "WorkspaceReady", operationId: operation.operationId });
@@ -150,6 +169,7 @@ export async function durableCommand(args: string[]): Promise<DurableCliResult> 
         if (!p.contract.config.repair || status() !== "REPAIR_READY") break;
       }
     }
+    if (p.intake && p.state.status === "VERIFIED") await deliver(() => p, append, faults);
     const result = store.read(); return { kind: "durable_result", projection: result.projection!, events: result.events };
   } catch (error) {
     return { kind: "durable_error", code: error instanceof DurableError ? error.code : "corrupt_store", issues: [String(error)] };

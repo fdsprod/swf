@@ -12,11 +12,12 @@ import localSchema from "../contracts/schemas/local-result.schema.json" with { t
 import evidenceSchema from "../contracts/schemas/local-evidence.schema.json" with { type: "json" };
 import durableSchema from "../contracts/schemas/durable-result.schema.json" with { type: "json" };
 
-export type ErrorCode = "input_error" | "store_busy" | "not_found" | "config_mismatch" | "corrupt_store" | "artifact_invalid" | "ownership_uncertain" | "decision_gateway_error" | "publication_uncertain" | "decision_conflict";
+export type ErrorCode = "input_error" | "store_busy" | "not_found" | "config_mismatch" | "corrupt_store" | "artifact_invalid" | "ownership_uncertain" | "decision_gateway_error" | "publication_uncertain" | "decision_conflict" | "github_gateway_error" | "delivery_error" | "push_conflict" | "pr_uncertain" | "ci_gateway_error";
 export class DurableError extends Error { constructor(public readonly code: ErrorCode, message: string) { super(message); } }
 const ajv = new Ajv({ allErrors: true });
 for (const schema of [fixtureSchema, resultSchema, configSchema, localSchema, evidenceSchema, durableSchema]) ajv.addSchema(schema);
 const validators = {
+  github: ajv.compile({ $ref: `${durableSchema.$id}#/definitions/githubInput` }),
   event: ajv.compile<DurableEvent>({ $ref: `${durableSchema.$id}#/definitions/event` }),
   projection: ajv.compile<DurableProjection>({ $ref: `${durableSchema.$id}#/definitions/projection` }),
   completion: ajv.compile<WorkerCompletion>({ $ref: `${durableSchema.$id}#/definitions/workerCompletion` }),
@@ -35,22 +36,32 @@ export async function storePath(path: string): Promise<string> {
 export async function atomicWrite(path: string, data: unknown): Promise<void> {
   const temp = `${path}.${process.pid}.tmp`; await writeFile(temp, JSON.stringify(data)); await rename(temp, path);
 }
-const points = ["decision.after_publish", "transaction.after_event_insert", "transaction.after_projection_write", "transaction.after_commit", "workspace.after_create", "worker.after_dispatch", "worker.after_completion_artifact", "verification.after_dispatch", "verification.after_command", "verification.after_evidence_artifact"];
+const points = ["delivery.after_commit_object", "delivery.after_push", "delivery.after_pr_create", "delivery.before_push", "decision.after_publish", "transaction.after_event_insert", "transaction.after_projection_write", "transaction.after_commit", "workspace.after_create", "worker.after_dispatch", "worker.after_completion_artifact", "verification.after_dispatch", "verification.after_command", "verification.after_evidence_artifact"];
 export class Faults {
-  private hook?: { point: string; eventType?: string; marker: string };
+  private hook?: { point: string; eventType?: string; marker: string; release?: string };
   constructor() {
     if (!process.env.SWF_TEST_FAULT) return;
     try {
       const hook: unknown = JSON.parse(process.env.SWF_TEST_FAULT);
       if (!hook || typeof hook !== "object" || Array.isArray(hook)) throw new Error("Expected object");
       const h = hook as Record<string, unknown>;
-      if (Object.keys(h).some(k => !["point", "eventType", "marker"].includes(k)) || typeof h.point !== "string" || !points.includes(h.point) || typeof h.marker !== "string" || !isAbsolute(h.marker) || (h.eventType !== undefined && typeof h.eventType !== "string")) throw new Error("Invalid fault boundary");
-      this.hook = { point: h.point, marker: h.marker, ...(typeof h.eventType === "string" ? { eventType: h.eventType } : {}) };
+      if (Object.keys(h).some(k => !["point", "eventType", "marker", "release"].includes(k)) || typeof h.point !== "string" || !points.includes(h.point) || typeof h.marker !== "string" || !isAbsolute(h.marker) || (h.eventType !== undefined && typeof h.eventType !== "string")) throw new Error("Invalid fault boundary");
+      if ((h.point === "delivery.before_push" && (typeof h.release !== "string" || !isAbsolute(h.release))) || (h.point !== "delivery.before_push" && h.release !== undefined)) throw new Error("Invalid release boundary");
+      this.hook = { ...(typeof h.release === "string" ? { release: h.release } : {}), point: h.point, marker: h.marker, ...(typeof h.eventType === "string" ? { eventType: h.eventType } : {}) };
     } catch (error) { throw new DurableError("input_error", `Invalid SWF_TEST_FAULT: ${String(error)}`); }
   }
-  async at(point: string, runId: string, eventType?: string): Promise<void> {
+  async at(point: string, runId: string, eventType?: string, writableRoots: string[] = []): Promise<void> {
     if (!this.hook || this.hook.point !== point || (this.hook.eventType && this.hook.eventType !== eventType)) return;
+    if (this.hook.release) {
+      const release = (await storePath(this.hook.release)).toLowerCase();
+      for (const root of writableRoots) { const prefix = (await storePath(root)).toLowerCase(); if (release === prefix || release.startsWith(prefix + "/") || release.startsWith(prefix + "\\")) throw new DurableError("input_error", "Push release must be outside worker writable roots"); }
+    }
     await atomicWrite(this.hook.marker, { point, runId, ...(eventType ? { eventType } : {}) });
+    if (this.hook.release) {
+      const deadline = Date.now() + 30000;
+      while (Date.now() < deadline) { if (await exists(this.hook.release)) return; await new Promise(done => setTimeout(done, 100)); }
+      throw new DurableError("delivery_error", "Push race boundary release timed out");
+    }
     await new Promise<void>(() => { setInterval(() => {}, 60000); });
   }
 }

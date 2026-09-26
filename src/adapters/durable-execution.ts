@@ -12,10 +12,11 @@ import { artifact, canonical, captureDiff, changes, contractDigest, git, hash, p
 import { commandResult, executeRestricted, outcome, workerArgs } from "./local-execution.js";
 import { jobIsStopped } from "./windows-job.js";
 import { atomicWrite, DurableError, exists, Faults, validateStored } from "./durable-store.js";
+import { gitBaseSnapshot, gitCandidateDiff } from "./git-delivery.js";
 
 export async function checkArtifact(ref: Artifact): Promise<void> { if ((await artifact(ref.path)).digest !== ref.digest) throw new Error(`Artifact changed: ${ref.path}`); }
 export async function checkPrograms(p: DurableProjection): Promise<void> {
-  if (contractDigest(p.contract.config, await programs(p.contract.config)) !== p.contract.digest) throw new Error("Pinned execution or verification inputs changed");
+  if (contractDigest(p.contract.config, await programs(p.contract.config, p.intake ? [p.intake.input.github.executable, p.intake.input.git.executable] : [])) !== p.contract.digest) throw new Error("Pinned execution or verification inputs changed");
 }
 export async function completion(path: string, attemptId: string, p?: DurableProjection): Promise<WorkerCompletion> {
   const value: unknown = JSON.parse(await readFile(path, "utf8")); validateStored("completion", value); const record = value as WorkerCompletion;
@@ -114,7 +115,7 @@ export async function performWorker(p: DurableProjection, a: DurableAttempt, sta
   const record = await executeRestricted(config, workspace.path, commonGit(workspace), directory, "worker", config.worker.executable, args, config.worker.timeoutSeconds, undefined, input, resolve(config.worker.executable).toLowerCase() === resolve(config.sandboxExecutable).toLowerCase(), workspace.path, started);
   let result = await outcome(record, config.decisions ? { runId: p.runId, unitId: p.graph.units[0]!.id, attemptId: a.id } : undefined);
   try {
-    const changed = changes(await baseSnapshot(workspace), await snapshot(workspace.path));
+    const changed = changes(p.intake ? await gitBaseSnapshot(p) : await baseSnapshot(workspace), await snapshot(workspace.path));
     if (changed.some(path => !config.allowedPaths.some(a => a.endsWith("/") ? path.startsWith(a) : path === a))) throw new Error("Worker changed a forbidden path");
     await checkPrograms(p);
   } catch (error) { result = { kind: "failed", reason: String(error), evidence: [] }; }
@@ -154,7 +155,7 @@ export async function verify(p: DurableProjection, faults: Faults): Promise<Loca
   if (p.workspace.kind !== "ready" || p.verification.kind !== "intent") throw new Error("Missing verification intent");
   const a = p.attempts.at(-1)!; if (a.kind !== "completed") throw new Error("Verification requires completed worker");
   const worker = await completion(a.record.path, a.id, p), workspace = p.workspace.workspace, config = p.contract.config;
-  const before = await baseSnapshot(workspace), candidate = await snapshot(workspace.path), changedPaths = changes(before, candidate);
+  const before = p.intake ? await gitBaseSnapshot(p) : await baseSnapshot(workspace), candidate = await snapshot(workspace.path), changedPaths = changes(before, candidate);
   const directory = join(dirname(p.verification.evidencePath), `check-${randomUUID()}`); await mkdir(directory, { recursive: true });
   const commands: LocalEvidence["commands"] = [], results: VerificationResult[] = [], issues: string[] = [];
   if (changedPaths.some(path => !config.allowedPaths.some(a => a.endsWith("/") ? path.startsWith(a) : path === a))) issues.push("Candidate changed a forbidden path");
@@ -175,7 +176,7 @@ export async function verify(p: DurableProjection, faults: Faults): Promise<Loca
     results.push(result);
     await faults.at("verification.after_command", p.runId);
   }
-  const diff = await captureDiff(workspace.path, p.baseCommit, join(directory, "diff.json"), before, candidate, changedPaths); issues.push(...diff.issues);
+  const diff = await captureDiff(workspace.path, p.baseCommit, join(directory, "diff.json"), before, candidate, changedPaths, p.intake ? () => gitCandidateDiff(p) : undefined); issues.push(...diff.issues);
   const evidence: LocalEvidence = { schemaVersion: 1, kind: "local_evidence", attemptId: a.id, workspace, candidate, contract: p.contract, worker: { process: worker.process, outcome: worker.outcome }, commands, changedPaths, diff: diff.artifact, verdict: durableVerdict(p.graph.units[0]!, results, issues) };
   await atomicWrite(p.verification.evidencePath, evidence); return evidence;
 }

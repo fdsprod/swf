@@ -45,8 +45,8 @@ export async function snapshot(root: string): Promise<LocalEvidence["candidate"]
   files.sort((a, b) => a.path.localeCompare(b.path));
   return { digest: hash(JSON.stringify(files)), files };
 }
-export async function programs(config: LocalConfig): Promise<Artifact[]> {
-  const paths = new Set<string>([...(config.decisions ? [config.decisions.executable] : []), config.worker.executable, config.sandboxExecutable, ...config.commands.map(c => c.executable)]);
+export async function programs(config: LocalConfig, extra: string[] = []): Promise<Artifact[]> {
+  const paths = new Set<string>([...extra, ...(config.decisions ? [config.decisions.executable] : []), config.worker.executable, config.sandboxExecutable, ...config.commands.map(c => c.executable)]);
   for (const root of config.verificationInputs) for (const path of await filePaths(root)) paths.add(path);
   const result: Artifact[] = [];
   for (const path of [...paths].sort()) result.push(await artifact(path));
@@ -59,7 +59,7 @@ export function changes(before: LocalEvidence["candidate"], after: LocalEvidence
   return [...new Set([...a.keys(), ...b.keys()])].filter(path => a.get(path) !== b.get(path)).sort();
 }
 
-export async function captureDiff(workspace: string, baseCommit: string, path: string, before: LocalEvidence["candidate"], after: LocalEvidence["candidate"], changedPaths: string[]): Promise<{ artifact: Artifact; issues: string[] }> {
+export async function captureDiff(workspace: string, baseCommit: string, path: string, before: LocalEvidence["candidate"], after: LocalEvidence["candidate"], changedPaths: string[], readPatch?: () => Promise<string>): Promise<{ artifact: Artifact; issues: string[] }> {
   const addedFiles: { path: string; encoding: string; content: string }[] = [];
   const issues: string[] = [];
   for (const file of after.files.filter(f => !before.files.some(b => b.path === f.path))) {
@@ -67,7 +67,7 @@ export async function captureDiff(workspace: string, baseCommit: string, path: s
     catch (error) { issues.push(`Cannot read added file ${file.path}: ${String(error)}`); }
   }
   let patch = "";
-  try { patch = git(workspace, "diff", "--binary", "--no-ext-diff", "--no-textconv", baseCommit, "--"); }
+  try { patch = readPatch ? await readPatch() : git(workspace, "diff", "--binary", "--no-ext-diff", "--no-textconv", baseCommit, "--"); }
   catch (error) { issues.push(`Cannot read Git diff: ${String(error)}`); }
   return { artifact: await save(path, JSON.stringify({ patch, addedFiles, issues, before: before.files, after: after.files, changedPaths })), issues };
 }
