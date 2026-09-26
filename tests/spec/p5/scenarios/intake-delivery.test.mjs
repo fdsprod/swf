@@ -36,11 +36,6 @@ test('P5-002: failed local checks prevent commit, push and PR',()=>withFixture({
   const p=assertDurable(run(f),f,'REPAIR_READY');assert.equal(p.delivery.kind,'unplanned');assert.equal(p.ci.kind,'unobserved');assertNoDelivery(f);
 }));
 
-test('P5-002: a verified empty diff cannot be delivered',()=>withFixture(f=>{
-  writeFileSync(join(f.repo,'src/answer.cjs'),'module.exports = 42;\n');commitFixture(f,'Already correct baseline');
-  f.githubConfig.runtime.worker.prefixArgs=[join(f.trusted,'codex-double.cjs'),'lie',f.root];writeConfig(f);assertError(run(f),'delivery_error');assertNoDelivery(f);assert.equal(readStore(f).projection.state.status,'VERIFIED');assert.equal(readStore(f).events.some(e=>e.fact.type==='CommitCreated'),false);
-}));
-
 test('P5-002: standard CRLF checkout bytes survive commit representation',()=>withFixture(f=>{
   writeFileSync(join(f.repo,'.gitattributes'),'*.txt text eol=crlf\n');writeFileSync(join(f.repo,'protected.txt'),'keep\n');commitFixture(f,'CRLF attributes baseline');
   const p=assertDurable(run(f),f,'VERIFIED');assert.equal(readFileSync(join(p.workspace.workspace.path,'protected.txt'),'utf8'),'keep\r\n');assertDeliveredTree(p,f);

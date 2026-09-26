@@ -4,11 +4,22 @@ import {spawnSync} from 'node:child_process';
 import {readFileSync,writeFileSync} from 'node:fs';
 import {join} from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {withFixture,validateGitHubConfig,validateProjection,git,hash,gateway,updateGateway,normalizedRequest} from './support.mjs';
+import {withFixture,validateGitHubConfig,validateProjection,git,hash,gateway,updateGateway,normalizedRequest,sourceSnapshot,trustedRoot} from './support.mjs';
 import {commitSha,ciKind,replay,assertSnapshot,assertIntake,assertDeliveryArtifacts} from './replay.mjs';
 import {gitResult,observedGit,assertGitModes,treeRecords} from './git-oracle.mjs';
 
 function artifact(f,name,bytes){const path=join(f.root,name);writeFileSync(path,bytes);return{path,digest:hash(bytes)};}
+test('P5 sanity: completed no-change worker emits valid completion without changing the candidate',()=>withFixture(f=>{
+  const before=sourceSnapshot(f),output=join(f.root,'no-change-result.json');
+  assert.equal(git(f.repo,'status','--porcelain','--untracked-files=all'),'');
+  const child=spawnSync(process.execPath,[join(trustedRoot,'tests/spec/p5/fixtures/completed-no-change.cjs'),'exec','-C',f.repo,'--output-last-message',output],{cwd:f.repo,encoding:'utf8',windowsHide:true,timeout:10000});
+  assert.ifError(child.error);assert.equal(child.status,0);assert.equal(child.stderr,'');
+  const events=child.stdout.trim().split(/\r?\n/).map(line=>JSON.parse(line)),completion=JSON.parse(readFileSync(output,'utf8'));
+  assert.deepEqual(events.map(event=>event.type),['thread.started','item.completed','turn.completed']);
+  assert.equal(completion.kind,'completed');assert.equal(typeof completion.message,'string');assert.ok(completion.message.length>0);
+  assert.deepEqual(JSON.parse(events[1].item.text),completion);assert.equal(events[1].item.type,'agent_message');
+  assert.deepEqual(sourceSnapshot(f),before);assert.equal(git(f.repo,'status','--porcelain','--untracked-files=all'),'');
+}));
 function commitInput(f){
   writeFileSync(join(f.repo,'src/answer.cjs'),'module.exports = 42;\n');git(f.repo,'add','src/answer.cjs');const tree=git(f.repo,'write-tree'),identity={name:'Factory Fixture',email:'factory@example.invalid',date:'1700000000 +0000'},message=artifact(f,'commit-message.txt','Factory fixture commit\n');
   const input={tree,parent:f.base,author:identity,committer:identity,message,expectedSha:'0'.repeat(40)};
