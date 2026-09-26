@@ -83,7 +83,12 @@
             "ownership_uncertain",
             "decision_gateway_error",
             "publication_uncertain",
-            "decision_conflict"
+            "decision_conflict",
+            "github_gateway_error",
+            "delivery_error",
+            "push_conflict",
+            "pr_uncertain",
+            "ci_gateway_error"
           ]
         },
         "issues": {
@@ -496,6 +501,9 @@
             "baseCommit": {
               "type": "string",
               "pattern": "^[a-f0-9]{40,64}$"
+            },
+            "intake": {
+              "$ref": "#/definitions/githubIntake"
             }
           }
         },
@@ -860,6 +868,167 @@
               "$ref": "#/definitions/attemptIdentity"
             }
           }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "plan"
+          ],
+          "properties": {
+            "type": {
+              "const": "DeliveryPlanned"
+            },
+            "plan": {
+              "$ref": "#/definitions/deliveryPlan"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "operationId",
+            "receipt"
+          ],
+          "properties": {
+            "type": {
+              "const": "CommitCreated"
+            },
+            "operationId": {
+              "type": "string",
+              "pattern": "\\S"
+            },
+            "receipt": {
+              "$ref": "#/definitions/commitReceipt"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "operationId"
+          ],
+          "properties": {
+            "type": {
+              "const": "PushStarted"
+            },
+            "operationId": {
+              "type": "string",
+              "pattern": "\\S"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "operationId",
+            "receipt"
+          ],
+          "properties": {
+            "type": {
+              "const": "PushConfirmed"
+            },
+            "operationId": {
+              "type": "string",
+              "pattern": "\\S"
+            },
+            "receipt": {
+              "$ref": "#/definitions/pushReceipt"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "publication"
+          ],
+          "properties": {
+            "type": {
+              "const": "PrPlanned"
+            },
+            "publication": {
+              "$ref": "#/definitions/pullRequestPlan"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "operationId"
+          ],
+          "properties": {
+            "type": {
+              "const": "PrStarted"
+            },
+            "operationId": {
+              "type": "string",
+              "pattern": "\\S"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "operationId",
+            "receipt"
+          ],
+          "properties": {
+            "type": {
+              "const": "PrCreated"
+            },
+            "operationId": {
+              "type": "string",
+              "pattern": "\\S"
+            },
+            "receipt": {
+              "$ref": "#/definitions/pullRequestReceipt"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "receipt"
+          ],
+          "properties": {
+            "type": {
+              "const": "PullRequestObserved"
+            },
+            "receipt": {
+              "$ref": "#/definitions/pullRequestReceipt"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "observation"
+          ],
+          "properties": {
+            "type": {
+              "const": "CiObserved"
+            },
+            "observation": {
+              "$ref": "#/definitions/ciObservation"
+            }
+          }
         }
       ]
     },
@@ -886,77 +1055,166 @@
       }
     },
     "projection": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "schemaVersion",
-        "runId",
-        "sequence",
-        "contract",
-        "graph",
-        "state",
-        "maxStarts",
-        "workspace",
-        "attempts",
-        "verification",
-        "baseCommit"
-      ],
-      "properties": {
-        "schemaVersion": {
-          "const": 1
-        },
-        "runId": {
-          "type": "string",
-          "pattern": "\\S"
-        },
-        "sequence": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "contract": {
-          "$ref": "#/definitions/contract"
-        },
-        "graph": {
-          "$ref": "#/definitions/graph"
-        },
-        "state": {
-          "$ref": "#/definitions/state"
-        },
-        "maxStarts": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 100
-        },
-        "workspace": {
-          "$ref": "#/definitions/workspaceOperation"
-        },
-        "attempts": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/attempt"
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "schemaVersion",
+            "runId",
+            "sequence",
+            "contract",
+            "graph",
+            "state",
+            "maxStarts",
+            "workspace",
+            "attempts",
+            "verification",
+            "baseCommit"
+          ],
+          "properties": {
+            "schemaVersion": {
+              "const": 1
+            },
+            "runId": {
+              "type": "string",
+              "pattern": "\\S"
+            },
+            "sequence": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "contract": {
+              "$ref": "#/definitions/contract"
+            },
+            "graph": {
+              "$ref": "#/definitions/graph"
+            },
+            "state": {
+              "$ref": "#/definitions/state"
+            },
+            "maxStarts": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "workspace": {
+              "$ref": "#/definitions/workspaceOperation"
+            },
+            "attempts": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/attempt"
+              }
+            },
+            "verification": {
+              "$ref": "#/definitions/verificationOperation"
+            },
+            "baseCommit": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{40,64}$"
+            },
+            "decisions": {
+              "type": "array",
+              "minItems": 0,
+              "items": {
+                "$ref": "#/definitions/decisionRecord"
+              }
+            },
+            "repairs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/repairReservation"
+              }
+            }
           }
         },
-        "verification": {
-          "$ref": "#/definitions/verificationOperation"
-        },
-        "baseCommit": {
-          "type": "string",
-          "pattern": "^[a-f0-9]{40,64}$"
-        },
-        "decisions": {
-          "type": "array",
-          "minItems": 0,
-          "items": {
-            "$ref": "#/definitions/decisionRecord"
-          }
-        },
-        "repairs": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/repairReservation"
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "schemaVersion",
+            "runId",
+            "sequence",
+            "contract",
+            "graph",
+            "state",
+            "maxStarts",
+            "workspace",
+            "attempts",
+            "verification",
+            "baseCommit",
+            "intake",
+            "delivery",
+            "ci"
+          ],
+          "properties": {
+            "schemaVersion": {
+              "const": 1
+            },
+            "runId": {
+              "type": "string",
+              "pattern": "\\S"
+            },
+            "sequence": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "contract": {
+              "$ref": "#/definitions/contract"
+            },
+            "graph": {
+              "$ref": "#/definitions/graph"
+            },
+            "state": {
+              "$ref": "#/definitions/state"
+            },
+            "maxStarts": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "workspace": {
+              "$ref": "#/definitions/workspaceOperation"
+            },
+            "attempts": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/attempt"
+              }
+            },
+            "verification": {
+              "$ref": "#/definitions/verificationOperation"
+            },
+            "baseCommit": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{40,64}$"
+            },
+            "decisions": {
+              "type": "array",
+              "minItems": 0,
+              "items": {
+                "$ref": "#/definitions/decisionRecord"
+              }
+            },
+            "repairs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/repairReservation"
+              }
+            },
+            "intake": {
+              "$ref": "#/definitions/githubIntake"
+            },
+            "delivery": {
+              "$ref": "#/definitions/deliveryProjection"
+            },
+            "ci": {
+              "$ref": "#/definitions/ciProjection"
+            }
           }
         }
-      }
+      ]
     },
     "githubIdentity": {
       "type": "object",
@@ -1306,6 +1564,1257 @@
         },
         "attempt": {
           "$ref": "#/definitions/attemptIdentity"
+        }
+      }
+    },
+    "commitIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "email"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "email": {
+          "type": "string",
+          "pattern": "\\S"
+        }
+      }
+    },
+    "requiredCheck": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "appId"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "appId": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "deliveryTransport": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "url"
+          ],
+          "properties": {
+            "kind": {
+              "const": "github_https"
+            },
+            "url": {
+              "type": "string",
+              "pattern": "\\S"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "path"
+          ],
+          "properties": {
+            "kind": {
+              "const": "local_bare"
+            },
+            "path": {
+              "type": "string",
+              "pattern": "\\S"
+            }
+          }
+        }
+      ]
+    },
+    "githubInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "issue",
+        "baseBranch",
+        "constraints",
+        "acceptanceCriteria",
+        "runtime",
+        "github",
+        "git",
+        "delivery"
+      ],
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "issue": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "owner",
+            "repo",
+            "number"
+          ],
+          "properties": {
+            "owner": {
+              "type": "string",
+              "pattern": "\\S"
+            },
+            "repo": {
+              "type": "string",
+              "pattern": "\\S"
+            },
+            "number": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "baseBranch": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "constraints": {
+          "type": "array",
+          "minItems": 0,
+          "items": {
+            "type": "string",
+            "pattern": "\\S"
+          }
+        },
+        "acceptanceCriteria": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "pattern": "\\S"
+          }
+        },
+        "runtime": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "verification",
+            "repositoryPath",
+            "workspaceRoot",
+            "artifactRoot",
+            "sandboxExecutable",
+            "worker",
+            "commands",
+            "allowedPaths",
+            "protectedPaths",
+            "blockedReadPaths",
+            "verificationInputs"
+          ],
+          "properties": {
+            "verification": {
+              "$ref": "https://swf.local/schemas/p0/run-fixture.schema.json#/definitions/verificationContract"
+            },
+            "repositoryPath": {
+              "$ref": "https://swf.local/schemas/p1/local-config.schema.json#/definitions/text"
+            },
+            "workspaceRoot": {
+              "$ref": "https://swf.local/schemas/p1/local-config.schema.json#/definitions/text"
+            },
+            "artifactRoot": {
+              "$ref": "https://swf.local/schemas/p1/local-config.schema.json#/definitions/text"
+            },
+            "sandboxExecutable": {
+              "$ref": "https://swf.local/schemas/p1/local-config.schema.json#/definitions/text"
+            },
+            "worker": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "executable",
+                "prefixArgs",
+                "timeoutSeconds"
+              ],
+              "properties": {
+                "executable": {
+                  "$ref": "https://swf.local/schemas/p1/local-config.schema.json#/definitions/text"
+                },
+                "prefixArgs": {
+                  "$ref": "https://swf.local/schemas/p1/local-config.schema.json#/definitions/args"
+                },
+                "timeoutSeconds": {
+                  "type": "number",
+                  "exclusiveMinimum": 0,
+                  "maximum": 3600
+                }
+              }
+            },
+            "commands": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "specId",
+                  "executable",
+                  "args"
+                ],
+                "properties": {
+                  "specId": {
+                    "$ref": "https://swf.local/schemas/p1/local-config.schema.json#/definitions/text"
+                  },
+                  "executable": {
+                    "$ref": "https://swf.local/schemas/p1/local-config.schema.json#/definitions/text"
+                  },
+                  "args": {
+                    "$ref": "https://swf.local/schemas/p1/local-config.schema.json#/definitions/args"
+                  }
+                }
+              }
+            },
+            "allowedPaths": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "$ref": "https://swf.local/schemas/p1/local-config.schema.json#/definitions/text"
+              }
+            },
+            "protectedPaths": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "$ref": "https://swf.local/schemas/p1/local-config.schema.json#/definitions/text"
+              }
+            },
+            "blockedReadPaths": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "$ref": "https://swf.local/schemas/p1/local-config.schema.json#/definitions/text"
+              }
+            },
+            "verificationInputs": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "$ref": "https://swf.local/schemas/p1/local-config.schema.json#/definitions/text"
+              }
+            }
+          }
+        },
+        "github": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "executable",
+            "prefixArgs",
+            "timeoutSeconds"
+          ],
+          "properties": {
+            "executable": {
+              "type": "string",
+              "pattern": "\\S"
+            },
+            "prefixArgs": {
+              "type": "array",
+              "minItems": 0,
+              "items": {
+                "type": "string"
+              }
+            },
+            "timeoutSeconds": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 300
+            }
+          }
+        },
+        "git": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "executable",
+            "timeoutSeconds"
+          ],
+          "properties": {
+            "executable": {
+              "type": "string",
+              "pattern": "\\S"
+            },
+            "timeoutSeconds": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 300
+            }
+          }
+        },
+        "delivery": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "transport",
+            "commitIdentity",
+            "requiredChecks"
+          ],
+          "properties": {
+            "transport": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "kind"
+                  ],
+                  "properties": {
+                    "kind": {
+                      "const": "github_https"
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "kind",
+                    "path"
+                  ],
+                  "properties": {
+                    "kind": {
+                      "const": "local_bare"
+                    },
+                    "path": {
+                      "type": "string",
+                      "pattern": "\\S"
+                    }
+                  }
+                }
+              ]
+            },
+            "commitIdentity": {
+              "$ref": "#/definitions/commitIdentity"
+            },
+            "requiredChecks": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/definitions/requiredCheck"
+              },
+              "uniqueItems": true
+            }
+          }
+        },
+        "decisions": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "authorizedResolver"
+          ],
+          "properties": {
+            "authorizedResolver": {
+              "$ref": "#/definitions/githubIdentity"
+            }
+          }
+        },
+        "repair": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind"
+          ],
+          "properties": {
+            "kind": {
+              "const": "local_verification"
+            },
+            "maxRepairs": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100
+            }
+          }
+        }
+      }
+    },
+    "repositoryIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "owner",
+        "name",
+        "url"
+      ],
+      "properties": {
+        "id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "owner": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "name": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "url": {
+          "type": "string",
+          "pattern": "\\S"
+        }
+      }
+    },
+    "githubIntake": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "input",
+        "repository",
+        "issue",
+        "base",
+        "transport",
+        "records"
+      ],
+      "properties": {
+        "input": {
+          "$ref": "#/definitions/githubInput"
+        },
+        "repository": {
+          "$ref": "#/definitions/repositoryIdentity"
+        },
+        "issue": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "number",
+            "url"
+          ],
+          "properties": {
+            "id": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "number": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "url": {
+              "type": "string",
+              "pattern": "\\S"
+            }
+          }
+        },
+        "base": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "branch",
+            "sha"
+          ],
+          "properties": {
+            "branch": {
+              "type": "string",
+              "pattern": "\\S"
+            },
+            "sha": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{40,64}$"
+            }
+          }
+        },
+        "transport": {
+          "$ref": "#/definitions/deliveryTransport"
+        },
+        "records": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "repository",
+            "issue",
+            "base"
+          ],
+          "properties": {
+            "repository": {
+              "$ref": "#/definitions/artifact"
+            },
+            "issue": {
+              "$ref": "#/definitions/artifact"
+            },
+            "base": {
+              "$ref": "#/definitions/artifact"
+            }
+          }
+        }
+      }
+    },
+    "commitInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tree",
+        "parent",
+        "author",
+        "committer",
+        "message",
+        "expectedSha"
+      ],
+      "properties": {
+        "tree": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{40,64}$"
+        },
+        "parent": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{40,64}$"
+        },
+        "author": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "email",
+            "date"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "pattern": "\\S"
+            },
+            "email": {
+              "type": "string",
+              "pattern": "\\S"
+            },
+            "date": {
+              "type": "string",
+              "pattern": "\\S"
+            }
+          }
+        },
+        "committer": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "email",
+            "date"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "pattern": "\\S"
+            },
+            "email": {
+              "type": "string",
+              "pattern": "\\S"
+            },
+            "date": {
+              "type": "string",
+              "pattern": "\\S"
+            }
+          }
+        },
+        "message": {
+          "$ref": "#/definitions/artifact"
+        },
+        "expectedSha": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{40,64}$"
+        }
+      }
+    },
+    "deliveryPlan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "operationId",
+        "verificationId",
+        "evidence",
+        "candidateDigest",
+        "baseCommit",
+        "repository",
+        "transport",
+        "branch",
+        "commit",
+        "snapshot"
+      ],
+      "properties": {
+        "operationId": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "verificationId": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "evidence": {
+          "$ref": "#/definitions/artifact"
+        },
+        "candidateDigest": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "baseCommit": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{40,64}$"
+        },
+        "repository": {
+          "$ref": "#/definitions/repositoryIdentity"
+        },
+        "transport": {
+          "$ref": "#/definitions/deliveryTransport"
+        },
+        "branch": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "commit": {
+          "$ref": "#/definitions/commitInput"
+        },
+        "snapshot": {
+          "$ref": "#/definitions/artifact"
+        }
+      }
+    },
+    "commitReceipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sha",
+        "process"
+      ],
+      "properties": {
+        "sha": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{40,64}$"
+        },
+        "process": {
+          "$ref": "https://swf.local/schemas/p1/local-evidence.schema.json#/definitions/process"
+        }
+      }
+    },
+    "pushReceipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ref",
+        "sha",
+        "process"
+      ],
+      "properties": {
+        "ref": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "sha": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{40,64}$"
+        },
+        "process": {
+          "$ref": "https://swf.local/schemas/p1/local-evidence.schema.json#/definitions/process"
+        }
+      }
+    },
+    "pullRequestPlan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "operationId",
+        "publisher",
+        "title",
+        "body"
+      ],
+      "properties": {
+        "operationId": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "publisher": {
+          "$ref": "#/definitions/githubIdentity"
+        },
+        "title": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "body": {
+          "$ref": "#/definitions/artifact"
+        }
+      }
+    },
+    "pullRequestState": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind"
+          ],
+          "properties": {
+            "kind": {
+              "const": "open"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind"
+          ],
+          "properties": {
+            "kind": {
+              "const": "closed"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "mergeCommitSha"
+          ],
+          "properties": {
+            "kind": {
+              "const": "merged"
+            },
+            "mergeCommitSha": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{40,64}$"
+            }
+          }
+        }
+      ]
+    },
+    "pullRequestReceipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "number",
+        "url",
+        "authorId",
+        "repositoryId",
+        "head",
+        "base",
+        "state",
+        "record"
+      ],
+      "properties": {
+        "id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "number": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "url": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "authorId": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "repositoryId": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "head": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "repositoryId",
+            "ref",
+            "sha"
+          ],
+          "properties": {
+            "repositoryId": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "ref": {
+              "type": "string",
+              "pattern": "\\S"
+            },
+            "sha": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{40,64}$"
+            }
+          }
+        },
+        "base": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "repositoryId",
+            "ref",
+            "sha"
+          ],
+          "properties": {
+            "repositoryId": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "ref": {
+              "type": "string",
+              "pattern": "\\S"
+            },
+            "sha": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{40,64}$"
+            }
+          }
+        },
+        "state": {
+          "$ref": "#/definitions/pullRequestState"
+        },
+        "record": {
+          "$ref": "#/definitions/artifact"
+        }
+      }
+    },
+    "deliveryProjection": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind"
+          ],
+          "properties": {
+            "kind": {
+              "const": "unplanned"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "plan"
+          ],
+          "properties": {
+            "kind": {
+              "const": "planned"
+            },
+            "plan": {
+              "$ref": "#/definitions/deliveryPlan"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "plan",
+            "commit"
+          ],
+          "properties": {
+            "kind": {
+              "const": "committed"
+            },
+            "plan": {
+              "$ref": "#/definitions/deliveryPlan"
+            },
+            "commit": {
+              "$ref": "#/definitions/commitReceipt"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "plan",
+            "commit"
+          ],
+          "properties": {
+            "kind": {
+              "const": "push_started"
+            },
+            "plan": {
+              "$ref": "#/definitions/deliveryPlan"
+            },
+            "commit": {
+              "$ref": "#/definitions/commitReceipt"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "plan",
+            "commit",
+            "push"
+          ],
+          "properties": {
+            "kind": {
+              "const": "pushed"
+            },
+            "plan": {
+              "$ref": "#/definitions/deliveryPlan"
+            },
+            "commit": {
+              "$ref": "#/definitions/commitReceipt"
+            },
+            "push": {
+              "$ref": "#/definitions/pushReceipt"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "plan",
+            "commit",
+            "push",
+            "publication"
+          ],
+          "properties": {
+            "kind": {
+              "const": "pr_planned"
+            },
+            "plan": {
+              "$ref": "#/definitions/deliveryPlan"
+            },
+            "commit": {
+              "$ref": "#/definitions/commitReceipt"
+            },
+            "push": {
+              "$ref": "#/definitions/pushReceipt"
+            },
+            "publication": {
+              "$ref": "#/definitions/pullRequestPlan"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "plan",
+            "commit",
+            "push",
+            "publication"
+          ],
+          "properties": {
+            "kind": {
+              "const": "pr_started"
+            },
+            "plan": {
+              "$ref": "#/definitions/deliveryPlan"
+            },
+            "commit": {
+              "$ref": "#/definitions/commitReceipt"
+            },
+            "push": {
+              "$ref": "#/definitions/pushReceipt"
+            },
+            "publication": {
+              "$ref": "#/definitions/pullRequestPlan"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "plan",
+            "commit",
+            "push",
+            "publication",
+            "pullRequest"
+          ],
+          "properties": {
+            "kind": {
+              "const": "created"
+            },
+            "plan": {
+              "$ref": "#/definitions/deliveryPlan"
+            },
+            "commit": {
+              "$ref": "#/definitions/commitReceipt"
+            },
+            "push": {
+              "$ref": "#/definitions/pushReceipt"
+            },
+            "publication": {
+              "$ref": "#/definitions/pullRequestPlan"
+            },
+            "pullRequest": {
+              "$ref": "#/definitions/pullRequestReceipt"
+            }
+          }
+        }
+      ]
+    },
+    "checkObservation": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "id",
+            "name",
+            "appId",
+            "headSha",
+            "status"
+          ],
+          "properties": {
+            "kind": {
+              "const": "pending"
+            },
+            "id": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "name": {
+              "type": "string",
+              "pattern": "\\S"
+            },
+            "appId": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "headSha": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{40,64}$"
+            },
+            "status": {
+              "enum": [
+                "queued",
+                "in_progress",
+                "waiting",
+                "requested",
+                "pending"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "id",
+            "name",
+            "appId",
+            "headSha",
+            "conclusion"
+          ],
+          "properties": {
+            "kind": {
+              "const": "completed"
+            },
+            "id": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "name": {
+              "type": "string",
+              "pattern": "\\S"
+            },
+            "appId": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "headSha": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{40,64}$"
+            },
+            "conclusion": {
+              "enum": [
+                "success",
+                "failure",
+                "neutral",
+                "cancelled",
+                "skipped",
+                "timed_out",
+                "action_required",
+                "stale",
+                "startup_failure"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "ciObservation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "headSha",
+        "before",
+        "after",
+        "checks",
+        "record"
+      ],
+      "properties": {
+        "headSha": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{40,64}$"
+        },
+        "before": {
+          "$ref": "#/definitions/pullRequestReceipt"
+        },
+        "after": {
+          "$ref": "#/definitions/pullRequestReceipt"
+        },
+        "checks": {
+          "type": "array",
+          "minItems": 0,
+          "items": {
+            "$ref": "#/definitions/checkObservation"
+          }
+        },
+        "record": {
+          "$ref": "#/definitions/artifact"
+        }
+      }
+    },
+    "ciProjection": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind"
+          ],
+          "properties": {
+            "kind": {
+              "const": "unobserved"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "observation"
+          ],
+          "properties": {
+            "kind": {
+              "const": "pending"
+            },
+            "observation": {
+              "$ref": "#/definitions/ciObservation"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "observation"
+          ],
+          "properties": {
+            "kind": {
+              "const": "passed"
+            },
+            "observation": {
+              "$ref": "#/definitions/ciObservation"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "observation"
+          ],
+          "properties": {
+            "kind": {
+              "const": "failed"
+            },
+            "observation": {
+              "$ref": "#/definitions/ciObservation"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "observation"
+          ],
+          "properties": {
+            "kind": {
+              "const": "stale_head"
+            },
+            "observation": {
+              "$ref": "#/definitions/ciObservation"
+            }
+          }
+        }
+      ]
+    },
+    "deliverySnapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "files"
+      ],
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "files": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "path",
+              "digest",
+              "mode",
+              "content"
+            ],
+            "properties": {
+              "path": {
+                "type": "string",
+                "pattern": "\\S"
+              },
+              "digest": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "mode": {
+                "enum": [
+                  "100644",
+                  "100755"
+                ]
+              },
+              "content": {
+                "$ref": "#/definitions/artifact"
+              }
+            }
+          }
         }
       }
     }

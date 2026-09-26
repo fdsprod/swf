@@ -2,6 +2,7 @@ import type { AgentOutcome, UnitExecutionState, VerificationResult, WorkGraph } 
 import type { Artifact, LocalEvidence, LocalWorkspace, ProcessRecord } from "./local.js";
 import type { DecisionFact, DecisionRecord } from "./decisions.js";
 import type { RepairFact, RepairReservation } from "./repair.js";
+import type { DeliveryFact, GitHubIntake, DeliveryProjection, CiProjection } from "./delivery.js";
 
 export interface ProcessIdentity { pid: number; createdAt: string; executable: string }
 export interface AttemptIdentity { id: string; ordinal: number; completionPath: string }
@@ -26,9 +27,10 @@ export interface WorkerCompletion {
   outcome: AgentOutcome;
 }
 export type DurableFact =
+  | DeliveryFact
   | RepairFact
   | DecisionFact
-  | { type: "RunCreated"; contract: LocalEvidence["contract"]; graph: WorkGraph; baseCommit: string; maxStarts: number }
+  | { type: "RunCreated"; contract: LocalEvidence["contract"]; graph: WorkGraph; baseCommit: string; maxStarts: number; intake?: GitHubIntake }
   | { type: "WorkspacePlanned"; operationId: string; workspace: LocalWorkspace }
   | { type: "WorkspaceReady"; operationId: string }
   | { type: "AttemptReserved"; attempt: AttemptIdentity }
@@ -40,7 +42,7 @@ export type DurableFact =
   | { type: "RunStopped"; reason: "worker_start_budget_exhausted" | "repair_budget_exhausted" | "recovery_failed"; message: string };
 export interface DurableEvent { sequence: number; runId: string; fact: DurableFact }
 // This projection is a cache of DurableEvent history, checked against replay on load.
-export interface DurableProjection {
+export interface DurableProjectionBase {
   schemaVersion: 1;
   runId: string;
   sequence: number;
@@ -55,7 +57,11 @@ export interface DurableProjection {
   decisions?: DecisionRecord[];
   repairs?: RepairReservation[];
 }
+export type DurableProjection = DurableProjectionBase & (
+  | { intake?: never; delivery?: never; ci?: never }
+  | { intake: GitHubIntake; delivery: DeliveryProjection; ci: CiProjection }
+);
 export type DurableCliResult =
   | { kind: "durable_result" | "durable_status"; projection: DurableProjection; events: DurableEvent[] }
-  | { kind: "durable_error"; code: "input_error" | "store_busy" | "not_found" | "config_mismatch" | "corrupt_store" | "artifact_invalid" | "ownership_uncertain" | "decision_gateway_error" | "publication_uncertain" | "decision_conflict"; issues: string[] }
+  | { kind: "durable_error"; code: "input_error" | "store_busy" | "not_found" | "config_mismatch" | "corrupt_store" | "artifact_invalid" | "ownership_uncertain" | "decision_gateway_error" | "publication_uncertain" | "decision_conflict" | "github_gateway_error" | "delivery_error" | "push_conflict" | "pr_uncertain" | "ci_gateway_error"; issues: string[] }
   | { kind: "not_implemented" };

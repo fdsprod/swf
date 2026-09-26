@@ -12,6 +12,10 @@ function inputError(issues: string[]): CliResult {
 }
 
 async function main(args: string[]): Promise<CliResult | LocalCliResult | DurableCliResult> {
+  if (args[0] === "run" && args[1] === "--github") {
+    const { githubCommand } = await import("./github.js");
+    return githubCommand(args);
+  }
   if (args.includes("--store") || args[0] === "resume" || args[0] === "status") {
     const { durableCommand } = await import("./durable.js");
     return durableCommand(args);
