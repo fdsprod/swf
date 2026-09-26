@@ -1,6 +1,6 @@
 # Bootstrap plan: a factory that can build its next feature
 
-Status: P0, P1, and P2 accepted. P3 and P4 passed all independent runnable checks, but required live proof is blocked. P5 implementation is under validation. The user authorized continuation through P5. P6 remains planned. See the [P0 acceptance report](phase-reports/p0.md), [P1 acceptance report](phase-reports/p1.md), [P2 acceptance report](phase-reports/p2.md), [P3 local verification report](phase-reports/p3.md), and [P4 local verification report](phase-reports/p4.md).
+Status: P0, P1, and P2 accepted. Implementation is complete through P5. P3, P4, and P5 passed all independent runnable checks, but required live proof is blocked. The user authorized continuation through P5. P6 remains planned. See the [P0 acceptance report](phase-reports/p0.md), [P1 acceptance report](phase-reports/p1.md), [P2 acceptance report](phase-reports/p2.md), [P3 local verification report](phase-reports/p3.md), [P4 local verification report](phase-reports/p4.md), and [P5 local verification report](phase-reports/p5.md).
 
 Build one local CLI that takes one request, runs Codex in a Git worktree, independently verifies the result, and produces a PR. It must retain its state across process exits, pause for a human decision, and make a bounded repair attempt. Use this version to build subsequent factory features.
 
@@ -384,7 +384,7 @@ Jev remains optional. A semantic assessment can request investigation or additio
 
 ## P0 execution handoff — completed
 
-P0 completed this handoff and passed its acceptance gate. P1 and P2 also passed their independent acceptance gates. P3 and P4 passed every runnable independent check, with live proof still blocked. P5 implementation is in progress.
+P0 completed this handoff and passed its acceptance gate. P1 and P2 also passed their independent acceptance gates. P3, P4, and P5 passed every runnable independent check, with required live proof still blocked. The exact P5 candidate passed all 407 cumulative runnable tests.
 
 - [x] Coordinator establishes the initial Git baseline and pins the P0 public CLI/fixture contract.
 - [x] `BP-0` builds the runnable stub and toolchain, executable harness, requirement map, pass sanity case, and dishonest-worker rejection case.

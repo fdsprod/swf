@@ -1,6 +1,6 @@
 # Software factory bootstrap
 
-The factory runs one work request in a restricted Git worktree. Separate verification commands check the exact candidate. Durable history supports restart recovery, human decisions, and bounded local repair. P5 adds GitHub issue intake, one verified commit, pull request delivery, and required CI checks. P5 validation is in progress. Required real GitHub proof is still pending.
+The factory runs one work request in a restricted Git worktree. Separate verification commands check the exact candidate. Durable history supports restart recovery, human decisions, and bounded local repair. P5 adds GitHub issue intake, one verified commit, pull request delivery, and required CI checks. All 407 independent runnable checks through P5 passed. Required real GitHub proof is still pending, so P3 through P5 are not formally accepted.
 
 Use Node.js 22.22.3 or later and npm. From the repository root:
 
@@ -63,7 +63,7 @@ Run the cumulative P5 acceptance gate:
 node tests/spec/p5/harness/run-gates.mjs
 ```
 
-This includes delivery and CI recovery, all earlier acceptance tests, a live Codex call, native sandbox probes, typecheck, build, and architecture checks. Set `P1_CODEX_EXE` if the installed native executable differs from the harness default. Logs and the frozen bundle digest go under `.p5-proof/latest/`. The coordinator uses this trusted runner outside the product worktree with `FACTORY_CANDIDATE_ROOT` and `P5_PROOF_DIR`. Missing required [live P3 evidence](tests/spec/p3/LIVE.md) or [live P5 evidence](tests/spec/p5/LIVE.md) makes the gate fail even when all local checks pass. The offline P0 gate remains `node tests/spec/harness/run-gates.mjs`.
+This includes delivery and CI recovery, all earlier acceptance tests, a live Codex call, native sandbox probes, typecheck, build, and architecture checks. The measured full run took about 56 minutes on the proven Windows runtime. Set `P1_CODEX_EXE` if the installed native executable differs from the harness default. Logs and the frozen bundle digest go under `.p5-proof/latest/`. The coordinator uses this trusted runner outside the product worktree with `FACTORY_CANDIDATE_ROOT` and `P5_PROOF_DIR`. Missing required [live P3 evidence](tests/spec/p3/LIVE.md) or [live P5 evidence](tests/spec/p5/LIVE.md) makes the gate fail even when all local checks pass. The offline P0 gate remains `node tests/spec/harness/run-gates.mjs`.
 
 The project is one npm package. `src/contracts` owns protocol types, schemas, and validation. `src/kernel` owns transitions and orchestration through separate worker and verifier ports. `src/adapters` supplies process, filesystem, sandbox, and scripted adapters. `src/cli` composes these modules. `tests/spec` contains the independently authored acceptance bundle.
 
