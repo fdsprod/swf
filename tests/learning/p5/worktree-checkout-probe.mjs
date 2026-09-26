@@ -1,7 +1,7 @@
 // Installed-Git learning only. All hooks, filters and credentials are owned dummy fixtures.
 import assert from 'node:assert/strict';
 import {spawnSync} from 'node:child_process';
-import {existsSync,mkdirSync,mkdtempSync,readFileSync,writeFileSync} from 'node:fs';
+import {existsSync,mkdirSync,mkdtempSync,readFileSync,realpathSync,writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {dirname,join,resolve} from 'node:path';
 
@@ -13,13 +13,13 @@ const dummy='DUMMY_WORKTREE_CREDENTIAL_NOT_A_SECRET';
 const env=Object.fromEntries(Object.entries(process.env).filter(([key])=>!(/^(GIT_|GH_|GITHUB_|SSH_ASKPASS$)/i.test(key))));
 Object.assign(env,{GH_TOKEN:dummy,GIT_CONFIG_NOSYSTEM:'1',GIT_CONFIG_GLOBAL:emptyConfig,GIT_ATTR_NOSYSTEM:'1',GIT_TERMINAL_PROMPT:'0',GIT_AUTHOR_NAME:'Checkout learning',GIT_AUTHOR_EMAIL:'learning@example.invalid',GIT_COMMITTER_NAME:'Checkout learning',GIT_COMMITTER_EMAIL:'learning@example.invalid'});
 const quote=value=>"'"+value.replaceAll('\\','/').replaceAll("'","'\\''")+"'";
-const effect=join(root,'effect.cjs');writeFileSync(effect,`const fs=require('node:fs');const [kind,...args]=process.argv.slice(2);fs.appendFileSync(${JSON.stringify(log)},JSON.stringify({kind,args,pid:process.pid,parentPid:process.ppid,cwd:process.cwd(),inheritedDummyCredential:process.env.GH_TOKEN===${JSON.stringify(dummy)}})+'\\n');if(kind==='filter')process.stdout.write(fs.readFileSync(0).toString().toUpperCase());`);
+const effect=join(root,'effect.cjs');writeFileSync(effect,`const fs=require('node:fs');const [kind,...args]=process.argv.slice(2);fs.appendFileSync(${JSON.stringify(log)},JSON.stringify({kind,args,pid:process.pid,parentPid:process.ppid,cwd:process.cwd(),inheritedDummyCredential:process.env.GH_TOKEN===${JSON.stringify(dummy)}})+'\\n');if(kind==='filter'||kind==='clean-filter')process.stdout.write(fs.readFileSync(0).toString().toUpperCase());`);
 const script=kind=>'#!/bin/sh\nexec '+quote(process.execPath)+' '+quote(effect)+' '+kind+' "$@"\n';
 writeFileSync(join(hooks,'post-checkout'),script('configured-post-checkout'));
 const commands=[];
-function run(args,{configuredGlobal=false}={}){
-  const child=spawnSync(git,['-C',source,'-c','core.autocrlf=false','-c','commit.gpgSign=false',...args],{env:{...env,GIT_CONFIG_GLOBAL:configuredGlobal?globalConfig:emptyConfig},encoding:'utf8',windowsHide:true,timeout:20000,maxBuffer:1024*1024});
-  const record={args,pid:child.pid,status:child.status,signal:child.signal,configuredGlobal,stdout:child.stdout,stderr:child.stderr};commands.push(record);assert.equal(!!child.error,false);assert.equal(child.status,0,JSON.stringify(record));return child;
+function run(args,{configuredGlobal=false,extraEnv={},input}={}){
+  const child=spawnSync(git,['-C',source,'-c','core.autocrlf=false','-c','commit.gpgSign=false',...args],{env:{...env,GIT_CONFIG_GLOBAL:configuredGlobal?globalConfig:emptyConfig,...extraEnv},input,encoding:'utf8',windowsHide:true,timeout:20000,maxBuffer:1024*1024});
+  const record={args,pid:child.pid,status:child.status,signal:child.signal,configuredGlobal,environmentOverrides:extraEnv,stdout:child.stdout,stderr:child.stderr};commands.push(record);assert.equal(!!child.error,false);assert.equal(child.status,0,JSON.stringify(record));return child;
 }
 const lines=()=>existsSync(log)?readFileSync(log,'utf8').trim().split('\n').filter(Boolean).map(JSON.parse):[];
 const version=run(['--version']).stdout.trim();run(['init','-b','main',source]);
@@ -28,7 +28,7 @@ writeFileSync(join(source,'.gitattributes'),'*.txt text eol=crlf\n');writeFileSy
 // empty directory or makes Git search the checkout root instead.
 writeFileSync(join(source,'post-checkout'),script('tracked-root-post-checkout'));
 run(['add','-A']);run(['commit','-m','Ordinary attributes and owned hook-shaped file']);const base=run(['rev-parse','HEAD']).stdout.trim();
-run(['config','core.hooksPath',hooks]);run(['config','filter.owned.smudge',quote(process.execPath)+' '+quote(effect)+' filter']);run(['config','filter.owned.required','true']);
+run(['config','core.hooksPath',hooks]);run(['config','filter.owned.smudge',quote(process.execPath)+' '+quote(effect)+' filter']);run(['config','filter.owned.clean',quote(process.execPath)+' '+quote(effect)+' clean-filter']);run(['config','filter.owned.required','true']);
 run(['config','--file',globalConfig,'core.attributesFile',globalAttributes]);
 const observations=[];
 for(const [name,overrides]of [
@@ -48,5 +48,19 @@ assert.equal(has('empty-hook-directory','configured-post-checkout'),false);asser
 assert.equal(has('empty-global-attributes','filter'),false);assert.equal(has('empty-global-attributes','configured-post-checkout'),true);assert.equal(observed('empty-global-attributes').ordinaryText,'base content\r\n');
 assert.deepEqual(observed('both-boundaries').effects,[]);assert.equal(observed('both-boundaries').ordinaryText,'base content\r\n');assert.equal(observed('both-boundaries').baseAttributes,'*.txt text eol=crlf\n');
 for(const item of observations)assert.equal(item.baseAttributes,'*.txt text eol=crlf\n');
+// --no-ext-diff and --no-textconv do not disable conversion from working-tree
+// bytes to the indexed representation. Observe the clean callback separately.
+const candidate=join(root,'both-boundaries');writeFileSync(join(candidate,'ordinary.txt'),'changed actual content\r\n');
+const diffStart=lines().length,ambientDiff=run(['-C',candidate,'--attr-source='+base,'diff','--binary','--no-ext-diff','--no-textconv',base,'--','ordinary.txt'],{configuredGlobal:true}).stdout;
+const cleanEffects=lines().slice(diffStart);assert.ok(cleanEffects.some(e=>e.kind==='clean-filter'));assert.ok(cleanEffects.every(e=>e.inheritedDummyCredential));assert.ok(ambientDiff.includes('+CHANGED ACTUAL CONTENT'));
+const common=realpathSync(run(['rev-parse','--path-format=absolute','--git-common-dir']).stdout.trim()),privateGit=join(root,'diff-controlled.git'),privateIndex=join(root,'diff-private.index');
+run(['init','--bare',privateGit]);const indexPath=run(['-C',candidate,'rev-parse','--path-format=absolute','--git-path','index']).stdout.trim(),indexBefore=readFileSync(indexPath),sourceIndexBefore=readFileSync(join(common,'index'));
+const controlledArgs=['--git-dir',privateGit,'--work-tree',candidate,'-c','core.hooksPath='+emptyHooks,'-c','core.attributesFile=','-c','core.filemode=false','--attr-source='+base],shared={GIT_INDEX_FILE:privateIndex,GIT_OBJECT_DIRECTORY:realpathSync(join(common,'objects'))};
+const controlledStart=lines().length;run([...controlledArgs,'read-tree',base],{extraEnv:shared});
+const controlledDiff=run([...controlledArgs,'diff','--binary','--no-ext-diff','--no-textconv',base,'--','ordinary.txt'],{extraEnv:shared}).stdout;
+assert.ok(controlledDiff.includes('-base content'));assert.ok(controlledDiff.includes('+changed actual content'));assert.equal(controlledDiff.includes('+CHANGED ACTUAL CONTENT'),false);
+run([...controlledArgs,'apply','--cached','--check','-'],{extraEnv:shared,input:controlledDiff});run([...controlledArgs,'apply','--cached','-'],{extraEnv:shared,input:controlledDiff});
+assert.equal(run([...controlledArgs,'show',':ordinary.txt'],{extraEnv:shared}).stdout,'changed actual content\n');assert.deepEqual(lines().slice(controlledStart),[]);assert.deepEqual(readFileSync(indexPath),indexBefore);assert.deepEqual(readFileSync(join(common,'index')),sourceIndexBefore);assert.equal(readFileSync(join(candidate,'ordinary.txt'),'utf8'),'changed actual content\r\n');
+observations.push({name:'diff-clean-filter-boundary',ambientEffects:cleanEffects,ambientDiff,controlledDiff,controlledEffects:[],privateIndexPatchApplies:true,privateIndexResult:'changed actual content\n',candidateBytes:'changed actual content\r\n',sourceAndWorktreeIndexesUnchanged:true});
 mkdirSync(dirname(reportPath),{recursive:true});writeFileSync(reportPath,JSON.stringify({schemaVersion:1,observedAt:new Date().toISOString(),version,nodeVersion:process.version,fixtureRoot:root,dummyCredentialsOnly:true,realCredentialsRead:false,base,observations,commands},null,2)+'\n');
 process.stdout.write(JSON.stringify({report:reportPath,version,observations},null,2)+'\n');
