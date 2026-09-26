@@ -173,9 +173,11 @@ export function ciKind(required,head,observation){
 
 export function assertIntake(p){
   const i=p.intake;if(!i)return;const repository=JSON.parse(artifact(i.records.repository)),issue=JSON.parse(artifact(i.records.issue)),base=JSON.parse(artifact(i.records.base));
+  const canonicalUrl=`https://github.com/${repository.owner.login}/${repository.name}`,canonicalIssueUrl=canonicalUrl+'/issues/'+issue.number;
+  assert.equal(repository.html_url,canonicalUrl,'Repository URL must be independently canonical');assert.equal(repository.clone_url,canonicalUrl+'.git');assert.equal(issue.html_url,canonicalIssueUrl);if(i.transport.kind==='github_https')assert.equal(i.transport.url,canonicalUrl+'.git');
   assert.equal(repository.id,i.repository.id);assert.equal(repository.name,i.repository.name);assert.equal(repository.owner.login,i.repository.owner);assert.equal(repository.html_url,i.repository.url);
   assert.equal(Object.hasOwn(issue,'pull_request'),false);assert.equal(issue.id,i.issue.id);assert.equal(issue.number,i.input.issue.number);assert.equal(issue.html_url,i.issue.url);assert.equal(base.name,i.base.branch);assert.equal(base.commit.sha,i.base.sha);
-  const request={id:`github:${repository.id}:issue:${issue.id}`,source:{provider:'github',externalId:String(issue.number),url:issue.html_url},repository:{url:repository.html_url+'.git',baseRef:i.input.baseBranch},objective:issue.title+'\n\n'+(issue.body??''),constraints:i.input.constraints,acceptanceCriteria:i.input.acceptanceCriteria,metadata:{githubRepositoryId:repository.id,githubIssueId:issue.id}};
+  const request={id:`github:${repository.id}:issue:${issue.id}`,source:{provider:'github',externalId:String(issue.number),url:canonicalIssueUrl},repository:{url:canonicalUrl+'.git',baseRef:i.input.baseBranch},objective:issue.title+'\n\n'+(issue.body??''),constraints:i.input.constraints,acceptanceCriteria:i.input.acceptanceCriteria,metadata:{githubRepositoryId:repository.id,githubIssueId:issue.id}};
   const expected={schemaVersion:1,request,...i.input.runtime,...(i.input.repair?{repair:i.input.repair}:{}),...(i.input.decisions?{decisions:{kind:'github_issue_comments',...i.input.github,authorizedResolver:i.input.decisions.authorizedResolver}}:{})};assert.deepEqual(p.contract.config,expected);
   for(const executable of [i.input.github.executable,i.input.git.executable])assert.ok(p.contract.programs.some(a=>a.path.replaceAll('\\','/').toLowerCase()===executable.replaceAll('\\','/').toLowerCase()&&a.digest===hash(readFileSync(executable))),'Both delivery executable bytes must be pinned');
 }

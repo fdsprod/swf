@@ -65,6 +65,11 @@ function trace(f){
 }
 test('P5 sanity: independent fact replay rejects changed target, ancestry, receipt and forged CI',()=>withFixture(f=>{
   const events=trace(f),p=replay(events);assert.equal(p.ci.kind,'passed');assertSnapshot({events,projection:p});assertIntake(p);
+  for(const [index,origin]of ['http://github.com','https://github.com:443','https://github.com.evil.invalid'].entries()){
+    const bad=structuredClone(p),d=gateway(f),url=origin+'/'+d.repository.full_name;d.repository.html_url=url;d.repository.clone_url=url+'.git';d.issue.html_url=url+'/issues/'+d.issue.number;
+    bad.intake.records.repository=artifact(f,`bad-repository-${index}.json`,JSON.stringify(d.repository));bad.intake.records.issue=artifact(f,`bad-issue-${index}.json`,JSON.stringify(d.issue));bad.intake.repository.url=url;bad.intake.issue.url=d.issue.html_url;bad.contract.config.request.source.url=d.issue.html_url;bad.contract.config.request.repository.url=url+'.git';
+    assert.throws(()=>assertIntake(bad),{name:'AssertionError',message:/independently canonical/});
+  }
   for(const absent of ['intake','delivery','ci']){const partial=structuredClone(p);delete partial[absent];assert.equal(validateProjection(partial),false,'Partial GitHub feature group: '+absent);}
   const legacy=structuredClone(p);delete legacy.intake;delete legacy.delivery;delete legacy.ci;assert.equal(validateProjection(legacy),true);
   for(const change of [e=>{e[7].fact.plan.transport.path='another-target';},e=>{e[7].fact.plan.commit.parent='a'.repeat(40);},e=>{e[6].fact.results[0].status='failed';},e=>{e[10].fact.receipt.sha='b'.repeat(40);},e=>{e[13].fact.receipt.head.repositoryId=999;}]){const bad=structuredClone(events);change(bad);assert.throws(()=>replay(bad),assert.AssertionError);}
