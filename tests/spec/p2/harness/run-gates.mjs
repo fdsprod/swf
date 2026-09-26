@@ -39,7 +39,7 @@ if (!differences.length) {
   execute('p1-cumulative', [join(trustedRoot, 'tests/spec/p1/harness/run-gates.mjs')], { timeout: 1200000, env: { P1_PROOF_DIR: join(proofDirectory, 'p1') } });
   execute('p2-sanity', ['--test', '--test-reporter=tap', join(trustedRoot, 'tests/spec/p2/harness/sanity.test.mjs')], { tests: true });
   execute('p2-acceptance', ['--test', '--test-reporter=tap', '--test-concurrency=1',
-    ...['durable', 'recovery'].map(name => join(trustedRoot, `tests/spec/p2/scenarios/${name}.test.mjs`))], { timeout: 900000, tests: true });
+    ...['durable', 'recovery', 'evidence-regressions'].map(name => join(trustedRoot, `tests/spec/p2/scenarios/${name}.test.mjs`))], { timeout: 900000, tests: true });
 }
 function changes(root) {
   const after = manifest(root);
