@@ -1,0 +1,40 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://swf.local/schemas/p1/local-config.schema.json",
+  "type": "object", "additionalProperties": false,
+  "required": ["schemaVersion", "request", "verification", "repositoryPath", "workspaceRoot", "artifactRoot", "worker", "sandboxExecutable", "commands", "allowedPaths", "protectedPaths", "blockedReadPaths", "verificationInputs"],
+  "properties": {
+    "schemaVersion": {"const": 1},
+    "request": {"$ref": "../p0/run-fixture.schema.json#/definitions/workRequest"},
+    "verification": {"$ref": "../p0/run-fixture.schema.json#/definitions/verificationContract"},
+    "repositoryPath": {"$ref": "#/definitions/text"},
+    "workspaceRoot": {"$ref": "#/definitions/text"},
+    "artifactRoot": {"$ref": "#/definitions/text"},
+    "sandboxExecutable": {"$ref": "#/definitions/text"},
+    "worker": {
+      "type": "object", "additionalProperties": false, "required": ["executable", "prefixArgs", "timeoutSeconds"],
+      "properties": {
+        "executable": {"$ref": "#/definitions/text"},
+        "prefixArgs": {"$ref": "#/definitions/args"},
+        "timeoutSeconds": {"type": "number", "exclusiveMinimum": 0, "maximum": 3600}
+      }
+    },
+    "commands": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["specId", "executable", "args"],
+        "properties": {
+          "specId": {"$ref": "#/definitions/text"}, "executable": {"$ref": "#/definitions/text"}, "args": {"$ref": "#/definitions/args"}
+        }
+      }
+    },
+    "allowedPaths": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/definitions/text"}},
+    "protectedPaths": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/definitions/text"}},
+    "blockedReadPaths": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/definitions/text"}},
+    "verificationInputs": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/definitions/text"}}
+  },
+  "definitions": {
+    "text": {"type": "string", "pattern": "\\S"},
+    "args": {"type": "array", "items": {"type": "string"}}
+  }
+}

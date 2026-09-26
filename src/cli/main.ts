@@ -3,12 +3,18 @@ import type { CliResult, RunFixture } from "../contracts/index.js";
 import { fixtureIssues } from "../contracts/validation.js";
 import { run } from "../kernel/index.js";
 import { scriptedVerifier, scriptedWorker } from "../adapters/scripted.js";
+import type { LocalCliResult } from "../contracts/local.js";
+import { runLocal, checkEvidence } from "./local.js";
 
 function inputError(issues: string[]): CliResult {
   return { kind: "input_error", issues, events: [] };
 }
 
-async function main(args: string[]): Promise<CliResult> {
+async function main(args: string[]): Promise<CliResult | LocalCliResult> {
+  if (args.length === 4 && args[2] && args[3] === "--json") {
+    if (args[0] === "run" && args[1] === "--local") return runLocal(args[2]);
+    if (args[0] === "check" && args[1] === "--evidence") return checkEvidence(args[2]);
+  }
   if (args.length !== 4 || args[0] !== "run" || args[1] !== "--fixture" || !args[2] || args[3] !== "--json") {
     return inputError(["Usage: node dist/cli/main.js run --fixture <JSON file> --json"]);
   }
@@ -26,4 +32,4 @@ async function main(args: string[]): Promise<CliResult> {
 
 const result = await main(process.argv.slice(2));
 process.stdout.write(`${JSON.stringify(result)}\n`);
-process.exitCode = result.kind === "run_result" ? (result.state.status === "VERIFIED" ? 0 : 1) : 2;
+process.exitCode = result.kind === "not_implemented" ? 3 : result.kind === "evidence_check" ? (result.status === "current" ? 0 : 1) : result.kind === "run_result" || result.kind === "local_run_result" ? (result.state.status === "VERIFIED" ? 0 : 1) : 2;
