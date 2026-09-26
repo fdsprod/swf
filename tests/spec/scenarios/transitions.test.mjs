@@ -64,6 +64,9 @@ const gateCases = {
   'empty evidence': [results => { results[1].evidence = []; }, 'FAILED'],
   'invalid evidence': [results => { results[1].evidence = [{}]; }, 'FAILED'],
   'invalid status': [results => { results[1].status = 'skipped'; }, 'FAILED'],
+  'sparse result array': [results => { delete results[1]; }, 'FAILED'],
+  'undefined result entry': [results => { results[1] = undefined; }, 'FAILED'],
+  'null result entry': [results => { results[1] = null; }, 'FAILED'],
 };
 for (const [name, [mutate, expected]] of Object.entries(gateCases)) {
   test(`P0-002 kernel gate: ${name}`, () => {
@@ -72,6 +75,14 @@ for (const [name, [mutate, expected]] of Object.entries(gateCases)) {
     assert.equal(outcome.kind, 'transitioned'); assert.equal(outcome.state.status, expected);
   });
 }
+
+test('P0-002 kernel gate: one required check cannot pass with an entirely sparse result array', () => {
+  const current = state('VERIFYING');
+  current.unit.verification.required = [current.unit.verification.required[0]];
+  const result = transition(current, { type: 'verification_finished', results: Array(1) });
+  assert.equal(result.kind, 'transitioned');
+  assert.equal(result.state.status, 'FAILED');
+});
 
 const invalidContracts = {
   empty: c => { c.required = []; },
