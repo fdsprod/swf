@@ -1,6 +1,6 @@
 # Bootstrap plan: a factory that can build its next feature
 
-Status: P0 accepted. P1 is in progress. The user authorized continuation through P5. P6 remains planned. See the [P0 acceptance report](phase-reports/p0.md).
+Status: P0 and P1 accepted. P2 is in progress. The user authorized continuation through P5. P6 remains planned. See the [P0 acceptance report](phase-reports/p0.md) and [P1 acceptance report](phase-reports/p1.md).
 
 Build one local CLI that takes one request, runs Codex in a Git worktree, independently verifies the result, and produces a PR. It must retain its state across process exits, pause for a human decision, and make a bounded repair attempt. Use this version to build subsequent factory features.
 
@@ -168,12 +168,12 @@ Use Codex's documented non-interactive interface: `codex exec`, JSONL events wit
 
 The exit gate requires these observations.
 
-- [ ] Codex makes the requested behavior change in the worktree. The original checkout remains unchanged.
-- [ ] The factory runs its own verifier after the worker ends and preserves the command, exit code, output, and candidate identity.
-- [ ] Wrong behavior, malformed outcomes, command errors, and timeouts block advancement.
-- [ ] Worker timeout and cancellation stop owned child processes in the selected Windows environment.
-- [ ] Protected verification files, factory state, and delivery authority remain outside the worker's allowed write/action scope. The negative fixture tests the actual restriction.
-- [ ] A mutation after verification invalidates delivery eligibility.
+- [x] Codex makes the requested behavior change in the worktree. The original checkout remains unchanged.
+- [x] The factory runs its own verifier after the worker ends and preserves the command, exit code, output, and candidate identity.
+- [x] Wrong behavior, malformed outcomes, command errors, and timeouts block advancement.
+- [x] Worker timeout and cancellation stop owned child processes in the selected Windows environment.
+- [x] Protected verification files, factory state, and delivery authority remain outside the worker's allowed write/action scope. The negative fixture tests the actual restriction.
+- [x] A mutation after verification invalidates delivery eligibility.
 
 **Useful outcome:** A local assistant can make a verified change. An operator still handles restart and delivery until later phases pass.
 
@@ -374,7 +374,7 @@ Jev remains optional. A semantic assessment can request investigation or additio
 
 ## P0 execution handoff — completed
 
-P0 completed this handoff and passed its acceptance gate. P1 has started with independent learning probes and acceptance-contract design.
+P0 completed this handoff and passed its acceptance gate. P1 also passed its independent acceptance gate. P2 is next.
 
 - [x] Coordinator establishes the initial Git baseline and pins the P0 public CLI/fixture contract.
 - [x] `BP-0` builds the runnable stub and toolchain, executable harness, requirement map, pass sanity case, and dishonest-worker rejection case.

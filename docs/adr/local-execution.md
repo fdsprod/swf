@@ -1,6 +1,6 @@
 # Local execution and recovery boundaries
 
-Status: design for P1 and P2. Acceptance remains pending.
+Status: P1 accepted. P2 recovery acceptance remains pending.
 
 The bootstrap targets one Windows operator and approved local repositories. A
 Git worktree separates changes. It does not restrict access by itself. The

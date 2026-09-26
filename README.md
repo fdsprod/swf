@@ -1,6 +1,6 @@
 # Software factory bootstrap
 
-P0 is an offline CLI that runs one work request through a deterministic kernel. A scripted worker claims an outcome. A separate scripted verifier supplies check results. Only the kernel can mark the unit `VERIFIED`.
+The factory runs one work request through a deterministic kernel. P1 runs Codex in a restricted Git worktree, executes separate verification commands, and saves evidence for the exact candidate. Only the kernel can mark the unit `VERIFIED`. P0's offline fixtures remain available.
 
 Use Node.js 22.22.3 or later and npm. From the repository root:
 
@@ -22,16 +22,25 @@ This example returns `REPAIR_READY` and exits with code 1. The worker's evidence
 
 Exit code 1 also covers failed verification and a pending decision. Invalid command usage or fixture data returns `input_error`, an empty event list, and exit code 2. Every required check needs exactly one result. Passed results need evidence. Missing, duplicate, unknown, or invalid results cannot approve a unit.
 
-Run the complete local acceptance gate:
+For a real run, create a configuration from the [P1 contract](tests/spec/p1-contract.md). Set absolute paths for the repository, workspace and artifact directories, native Codex executable, trusted verification programs, and protected credential paths. Then run:
 
 ```powershell
-node tests/spec/harness/run-gates.mjs
+node dist/cli/main.js run --local your-config.json --json
+node dist/cli/main.js check --evidence <returned-evidence-path> --json
 ```
 
-This runs typecheck, build, harness sanity checks, architecture checks, and acceptance scenarios. It records logs and a bundle digest under `.p0-proof/latest/`. During implementation, the coordinator runs a pinned copy of this harness outside the product worktree and supplies `FACTORY_CANDIDATE_ROOT` and `P0_PROOF_DIR`.
+The proven runtime is Windows with Node 22.22.3 and Codex CLI 0.157.1. Codex must be authenticated and its native sandbox must work. Configuration does not permit an unrestricted fallback. A verified run exits 0. Failed work exits 1. Invalid input exits 2. `check` exits 1 when the candidate, verification inputs, or required artifacts no longer match.
 
-The project is one npm package. `src/contracts` owns protocol types, schemas, and validation. `src/kernel` owns transitions and orchestration through separate asynchronous worker and verifier ports. `src/adapters` supplies deterministic scripts. `src/cli` reads fixture files and composes these modules. `tests/spec` contains the independently authored acceptance bundle.
+Run the cumulative acceptance gate:
 
-Commands in fixtures are opaque labels. P0 does not execute commands, invoke Codex, edit a repository, persist runs, resume decisions, or create PRs. All state and events last for one process. The next phase adds a real worktree, Codex CLI, and factory-owned command verification.
+```powershell
+node tests/spec/p1/harness/run-gates.mjs
+```
 
-See the [P0 acceptance report](docs/phase-reports/p0.md), [bootstrap plan](docs/bootstrap-plan.md), [public P0 contract](tests/spec/p0-contract.md), and [bootstrap boundaries ADR](docs/adr/bootstrap-boundaries.md).
+This includes a live Codex call, actual sandbox probes, P0 tests, typecheck, build, and architecture checks. Set `P1_CODEX_EXE` if the installed native executable differs from the harness default. Logs and the frozen bundle digest go under `.p1-proof/latest/`. The coordinator uses this trusted runner outside the product worktree with `FACTORY_CANDIDATE_ROOT` and `P1_PROOF_DIR`. The offline P0 gate remains `node tests/spec/harness/run-gates.mjs`.
+
+The project is one npm package. `src/contracts` owns protocol types, schemas, and validation. `src/kernel` owns transitions and orchestration through separate worker and verifier ports. `src/adapters` supplies process, filesystem, sandbox, and scripted adapters. `src/cli` composes these modules. `tests/spec` contains the independently authored acceptance bundle.
+
+Commands in P0 fixtures remain opaque labels. P1 binds real verification commands by executable and argument vector. P1 saves evidence but does not resume interrupted runs, resolve decisions, repair work, or create PRs. P2 adds durable recovery.
+
+See the [P1 acceptance report](docs/phase-reports/p1.md), [P0 acceptance report](docs/phase-reports/p0.md), [bootstrap plan](docs/bootstrap-plan.md), and [execution boundaries](docs/adr/local-execution.md).
