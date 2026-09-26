@@ -36,6 +36,26 @@ test('P2-002 database rejects event updates/deletes and detects a mismatched pro
   assert.equal(invocations(f).length, 1);
 }));
 
+test('P2-002 INSERT OR REPLACE cannot replace an existing event sequence', () => withFixture(f => {
+  assertDurable(run(f), f, 'VERIFIED');
+  const before = readStore(f);
+  const db = new DatabaseSync(join(f.store, 'run.sqlite'));
+  try {
+    const rows = () => db.prepare('SELECT sequence, run_id, json FROM events ORDER BY sequence').all();
+    const originalRows = rows(), first = originalRows[0];
+    const replacement = JSON.parse(first.json);
+    assert.equal(replacement.fact.type, 'RunCreated');
+    replacement.fact.maxStarts += 1;
+    // Use an ordinary new SQLite connection. No trigger or schema changes are permitted.
+    assert.throws(() => db.prepare('INSERT OR REPLACE INTO events(sequence,run_id,json) VALUES(?,?,?)')
+      .run(first.sequence, first.run_id, JSON.stringify(replacement)), 'Append-only history must reject replacement inserts');
+    assert.deepEqual(rows(), originalRows, 'Every stored event row must remain byte-for-byte unchanged');
+  } finally { db.close(); }
+  assert.deepEqual(readStore(f), before);
+  assertDurable(status(f), f, 'VERIFIED', 'durable_status');
+  assert.equal(invocations(f).length, 1);
+}));
+
 test('P2-002 malformed projection is a recovery diagnostic, not a reset', () => withFixture(f => {
   assertDurable(run(f), f, 'VERIFIED');
   const before = readStore(f);

@@ -29,3 +29,9 @@ Use `FACTORY_CANDIDATE_ROOT` to judge an isolated candidate and `P2_PROOF_DIR` f
 - The coordinator must raise the frozen runtime minimum to a tested Node version with `node:sqlite`; the learning and preparation runs used 22.22.3. No dependency or package files were changed here.
 
 PRODUCT-2 may implement the new CLI and adapters, but must not change these checks or public contracts. Contract changes return to BP-2 with new red evidence.
+
+## Independent regression additions
+
+Two regression groups strengthen existing P2-002 and P2-008 requirements. One attempts to replace a committed event through ordinary `INSERT OR REPLACE` and requires rejection with unchanged rows. The other kills the factory after writing a pending verification manifest and tests three false success claims: missing command records, an unknown command ID, and a nonzero process exit paired with a passed result. Each must produce `artifact_invalid` without durable verification completion.
+
+These additions bring the P2 acceptance suite to 40 cases. They were authored from the requirements without reading PRODUCT-2 source. The coordinator must record targeted behavioral red against a runnable PRODUCT-2 candidate before those fixes proceed; the original scaffold cannot demonstrate these specific defects.

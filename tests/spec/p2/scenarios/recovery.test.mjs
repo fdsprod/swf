@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { existsSync, mkdirSync, readFileSync, writeFileSync, symlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
-import { withFixture, run, resume, status, cli, runArgs, resumeArgs, statusArgs, fault, killFactory, waitFor, assertError, readStore, invocations, verifierInvocations, workspaces, ownedProcesses, git } from '../harness/support.mjs';
+import { withFixture, run, resume, status, cli, runArgs, resumeArgs, statusArgs, fault, killFactory, waitFor, assertError, readStore, invocations, verifierInvocations, workspaces, ownedProcesses, git, schema, validateEvidence } from '../harness/support.mjs';
 import { assertDurable, assertArtifacts, assertSnapshot } from '../harness/replay.mjs';
 
 for (const point of ['transaction.after_event_insert', 'transaction.after_projection_write']) {
@@ -134,6 +134,40 @@ test('P2-006 complete evidence/result gap reconciles without repeating verificat
   assert.equal(final.attempts.length, 1); assert.equal(invocations(f).length, 1); assert.equal(verifierInvocations(f).length, 1);
   assert.deepEqual(readFileSync(final.verification.evidence.path), bytes);
 }));
+
+for (const mutation of ['missing-command-records', 'wrong-command-id', 'nonzero-process-with-passed-verdict']) {
+test(`P2-008 pending manifest ${mutation} cannot approve recovery`, async () => withFixture(async f => {
+  const held = await fault(f, 'verification.after_evidence_artifact');
+  const before = readStore(f), p = assertSnapshot(before);
+  assert.equal(p.state.status, 'VERIFYING'); assert.equal(p.verification.kind, 'intent');
+  const pending = JSON.parse(readFileSync(p.verification.evidencePath, 'utf8'));
+  schema(validateEvidence, pending);
+  assert.equal(pending.verdict.status, 'VERIFIED');
+  assert.equal(pending.commands.length, f.config.verification.required.length);
+  assert.ok(pending.commands.length > 0);
+  const requiredIds = f.config.verification.required.map(spec => spec.id).sort();
+  assert.deepEqual(pending.commands.map(command => command.specId).sort(), requiredIds);
+  assert.deepEqual(pending.verdict.results.map(result => result.specId).sort(), requiredIds);
+  for (const command of pending.commands) assert.deepEqual(command.process.termination, { kind: 'exited', exitCode: 0 });
+  assert.ok(pending.verdict.results.every(result => result.status === 'passed'));
+  await killFactory(held);
+  const replacement = structuredClone(pending);
+  if (mutation === 'missing-command-records') replacement.commands = [];
+  if (mutation === 'wrong-command-id') replacement.commands[0].specId = 'unrequired-p2-command';
+  if (mutation === 'nonzero-process-with-passed-verdict') replacement.commands[0].process.termination = { kind: 'exited', exitCode: 7 };
+  schema(validateEvidence, replacement);
+  assert.deepEqual(replacement.verdict, pending.verdict, 'The forged manifest retains its prior success claim');
+  writeFileSync(p.verification.evidencePath, JSON.stringify(replacement));
+  assertError(resume(f), 'artifact_invalid');
+  const after = readStore(f), recovered = assertSnapshot(after);
+  assert.deepEqual(after.events.slice(0, before.events.length), before.events);
+  assert.equal(after.events.some(event => event.fact.type === 'VerificationCompleted'), false);
+  assert.notEqual(recovered.state.status, 'VERIFIED');
+  assert.equal(recovered.verification.kind, 'intent');
+  assert.deepEqual(recovered.attempts, p.attempts);
+  assert.equal(invocations(f).length, 1); assert.equal(verifierInvocations(f).length, 1);
+}));
+}
 
 test('P2-007 one owner includes junction aliases while status reads a consistent snapshot', async () => withFixture(async f => {
   const held = await fault(f, 'transaction.after_commit', 'AttemptReserved');
