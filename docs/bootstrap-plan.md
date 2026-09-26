@@ -1,6 +1,6 @@
 # Bootstrap plan: a factory that can build its next feature
 
-Status: P0 and P1 accepted. P2 is in progress. The user authorized continuation through P5. P6 remains planned. See the [P0 acceptance report](phase-reports/p0.md) and [P1 acceptance report](phase-reports/p1.md).
+Status: P0, P1, and P2 accepted. P3 is in progress. The user authorized continuation through P5. P6 remains planned. See the [P0 acceptance report](phase-reports/p0.md), [P1 acceptance report](phase-reports/p1.md), and [P2 acceptance report](phase-reports/p2.md).
 
 Build one local CLI that takes one request, runs Codex in a Git worktree, independently verifies the result, and produces a PR. It must retain its state across process exits, pause for a human decision, and make a bounded repair attempt. Use this version to build subsequent factory features.
 
@@ -193,13 +193,13 @@ Set a finite total worker-start budget when creating the run, with a bootstrap d
 
 The exit gate requires these observations.
 
-- [ ] Kill/restart preserves run identity, prior attempts, decisions if present, and evidence references.
-- [ ] Completed work is not repeated. Interrupted work is explicitly reconciled or retried, never silently reported complete.
-- [ ] Event history and the current projection cannot disagree after an interrupted transaction.
-- [ ] An existing workspace is found after a crash between creation and result persistence.
-- [ ] A second runner cannot concurrently own the same store. Recovery does not leave two workers active.
-- [ ] Repeated process crashes cannot create an unbounded sequence of worker starts or reset the run's budget.
-- [ ] A missing or damaged required artifact blocks advancement with a useful diagnostic.
+- [x] Kill/restart preserves run identity, prior attempts, decisions if present, and evidence references.
+- [x] Completed work is not repeated. Interrupted work is explicitly reconciled or retried, never silently reported complete.
+- [x] Event history and the current projection cannot disagree after an interrupted transaction.
+- [x] An existing workspace is found after a crash between creation and result persistence.
+- [x] A second runner cannot concurrently own the same store. Recovery does not leave two workers active.
+- [x] Repeated process crashes cannot create an unbounded sequence of worker starts or reset the run's budget.
+- [x] A missing or damaged required artifact blocks advancement with a useful diagnostic.
 
 **Useful outcome:** The factory can run longer tasks without depending on the lifetime of its original process or agent conversation.
 
@@ -374,7 +374,7 @@ Jev remains optional. A semantic assessment can request investigation or additio
 
 ## P0 execution handoff — completed
 
-P0 completed this handoff and passed its acceptance gate. P1 also passed its independent acceptance gate. P2 is next.
+P0 completed this handoff and passed its acceptance gate. P1 and P2 also passed their independent acceptance gates. P3 is next.
 
 - [x] Coordinator establishes the initial Git baseline and pins the P0 public CLI/fixture contract.
 - [x] `BP-0` builds the runnable stub and toolchain, executable harness, requirement map, pass sanity case, and dishonest-worker rejection case.
