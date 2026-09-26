@@ -1,0 +1,11 @@
+const fs=require('node:fs');
+const path=require('node:path');
+const {randomUUID}=require('node:crypto');
+const observed=require(path.join(process.cwd(),'src/answer.cjs'));
+const mode=process.argv[2]||'good';
+process.stdout.write('p2-verifier-invocation:'+randomUUID()+'\n');
+process.stdout.write('failure-token:'+randomUUID()+'\nraw-output:\u0000\u03bb\r\n');
+process.stdout.write(Buffer.from([0xff,0x80,0xfe,0x0a]));
+process.stderr.write(`Expected 42; observed ${observed}\n`);
+if(mode==='timeout')setInterval(()=>{},1000);
+else process.exitCode=mode==='baseline'||observed===42?0:7;

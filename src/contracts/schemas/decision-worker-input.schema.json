@@ -81,6 +81,71 @@
               }
             }
           }
+        },
+        "repair": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "repairId",
+            "failedVerificationId",
+            "failedAttemptId",
+            "evidence",
+            "results",
+            "commands"
+          ],
+          "properties": {
+            "repairId": {
+              "type": "string",
+              "pattern": "\\S"
+            },
+            "failedVerificationId": {
+              "type": "string",
+              "pattern": "\\S"
+            },
+            "failedAttemptId": {
+              "type": "string",
+              "pattern": "\\S"
+            },
+            "evidence": {
+              "$ref": "https://swf.local/schemas/p1/local-result.schema.json#/definitions/artifact"
+            },
+            "results": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "https://swf.local/schemas/p0/run-fixture.schema.json#/definitions/verificationResult"
+              }
+            },
+            "commands": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "specId",
+                  "process",
+                  "stdoutBase64",
+                  "stderrBase64"
+                ],
+                "properties": {
+                  "specId": {
+                    "type": "string",
+                    "pattern": "\\S"
+                  },
+                  "process": {
+                    "$ref": "https://swf.local/schemas/p1/local-evidence.schema.json#/definitions/process"
+                  },
+                  "stdoutBase64": {
+                    "type": "string"
+                  },
+                  "stderrBase64": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
         }
       }
     }

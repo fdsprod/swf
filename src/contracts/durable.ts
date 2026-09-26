@@ -1,6 +1,7 @@
 import type { AgentOutcome, UnitExecutionState, VerificationResult, WorkGraph } from "./index.js";
 import type { Artifact, LocalEvidence, LocalWorkspace, ProcessRecord } from "./local.js";
 import type { DecisionFact, DecisionRecord } from "./decisions.js";
+import type { RepairFact, RepairReservation } from "./repair.js";
 
 export interface ProcessIdentity { pid: number; createdAt: string; executable: string }
 export interface AttemptIdentity { id: string; ordinal: number; completionPath: string }
@@ -25,6 +26,7 @@ export interface WorkerCompletion {
   outcome: AgentOutcome;
 }
 export type DurableFact =
+  | RepairFact
   | DecisionFact
   | { type: "RunCreated"; contract: LocalEvidence["contract"]; graph: WorkGraph; baseCommit: string; maxStarts: number }
   | { type: "WorkspacePlanned"; operationId: string; workspace: LocalWorkspace }
@@ -35,7 +37,7 @@ export type DurableFact =
   | { type: "WorkerCompleted"; attemptId: string; outcome: AgentOutcome; record: Artifact }
   | { type: "VerificationPlanned"; operationId: string; attemptId: string; evidencePath: string }
   | { type: "VerificationCompleted"; operationId: string; results: VerificationResult[]; issues: string[]; evidence: Artifact }
-  | { type: "RunStopped"; reason: "worker_start_budget_exhausted" | "recovery_failed"; message: string };
+  | { type: "RunStopped"; reason: "worker_start_budget_exhausted" | "repair_budget_exhausted" | "recovery_failed"; message: string };
 export interface DurableEvent { sequence: number; runId: string; fact: DurableFact }
 // This projection is a cache of DurableEvent history, checked against replay on load.
 export interface DurableProjection {
@@ -51,6 +53,7 @@ export interface DurableProjection {
   attempts: DurableAttempt[];
   verification: VerificationOperation;
   decisions?: DecisionRecord[];
+  repairs?: RepairReservation[];
 }
 export type DurableCliResult =
   | { kind: "durable_result" | "durable_status"; projection: DurableProjection; events: DurableEvent[] }

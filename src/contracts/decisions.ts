@@ -1,6 +1,7 @@
 import type { DecisionRequest, EvidenceRef, WorkRequest, WorkUnit } from "./index.js";
 import type { Artifact, LocalWorkspace } from "./local.js";
 import type { DurableAttempt } from "./durable.js";
+import type { RepairContext } from "./repair.js";
 
 export interface GitHubIdentity { id: number; login: string }
 export interface DecisionConfig {
@@ -42,6 +43,7 @@ export type DecisionWireResponse = { outcome:
   | { kind: "decision_required"; decision: { question: string; reason: string; options: { id: string; description: string; consequences: string[] }[]; impact: string[]; reversible: boolean } }
 };
 export interface ContextPackage {
+  repair?: RepairContext;
   request: WorkRequest;
   unit: WorkUnit;
   priorAttempts: DurableAttempt[];

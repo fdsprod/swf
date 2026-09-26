@@ -1,5 +1,6 @@
 import type { AgentOutcome, FactoryEvent, VerificationContract, WorkGraph, WorkRequest, UnitExecutionState } from "./index.js";
 import type { DecisionConfig } from "./decisions.js";
+import type { RepairConfig } from "./repair.js";
 
 export interface LocalConfig {
   schemaVersion: 1;
@@ -16,6 +17,7 @@ export interface LocalConfig {
   blockedReadPaths: string[];
   verificationInputs: string[];
   decisions?: DecisionConfig;
+  repair?: RepairConfig;
 }
 
 export interface LocalWorkspace { path: string; repositoryPath: string; baseCommit: string }
