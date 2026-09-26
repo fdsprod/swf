@@ -24,7 +24,7 @@ These decisions refine roadmap order. The original specifications remain unchang
 
 ## The smallest representation
 
-Keep one TypeScript workspace, one CLI composition root, one local runner, one configured repository per run, and one WorkUnit per WorkRequest. Use the specified ports with one concrete adapter each. Introduce packages only when a slice uses them. Do not prebuild the full future package tree.
+Keep one TypeScript project, one CLI composition root, one local runner, one configured repository per run, and one WorkUnit per WorkRequest. Put application code under `src/` and acceptance tests under `tests/spec/`. Use module boundaries for contracts, kernel, CLI, and adapters within this single package. Introduce each adapter only when its slice needs it.
 
 The following is the complete bootstrap path. Each transition remains under kernel control.
 
@@ -313,21 +313,23 @@ docs/
   bootstrap-plan.md [new] #! This plan
   adr/
     bootstrap-boundaries.md [new] #! P0 scope and trust decisions
-spec/
-  requirements.md [new] #! Stable IDs and scenario mapping
-  scenarios/ [new] #! BP-owned black-box acceptance tests
-  fixtures/ [new] #! BP-owned repositories and scripted workers
-  harness/ [new] #! BP-owned runner and fault injection
-packages/
+tests/
+  spec/
+    requirements.md [new] #! Stable IDs and scenario mapping
+    scenarios/ [new] #! BP-owned black-box acceptance tests
+    fixtures/ [new] #! BP-owned repositories and scripted workers
+    harness/ [new] #! BP-owned runner and fault injection
+src/
   contracts/ [new] #! JSON schemas and corresponding TypeScript types
   kernel/ [new] #! State, attempts, decisions, and gates
   cli/ [new] #! Composition and operator commands
-  adapter-git/ [new] #! P1
-  adapter-agent-cli/ [new] #! P1 Codex implementation
-  adapter-command-verification/ [new] #! P1
-  adapter-local-artifacts/ [new] #! P1
-  adapter-sqlite/ [new] #! P2
-  adapter-github/ [new] #! P3 decisions, P5 intake/delivery/CI
+  adapters/
+    git/ [new] #! P1
+    agent-cli/ [new] #! P1 Codex implementation
+    command-verification/ [new] #! P1
+    local-artifacts/ [new] #! P1
+    sqlite/ [new] #! P2
+    github/ [new] #! P3 decisions, P5 intake/delivery/CI
 package.json [new]
 factory.config.json [new] #! Non-secret operator configuration
 ```

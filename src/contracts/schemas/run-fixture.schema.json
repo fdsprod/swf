@@ -1,0 +1,159 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://swf.local/schemas/p0/run-fixture.schema.json",
+  "title": "P0 scripted run fixture",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "request", "verification", "script"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "request": { "$ref": "#/definitions/workRequest" },
+    "verification": { "$ref": "#/definitions/verificationContract" },
+    "script": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["agentOutcome", "verificationResults"],
+      "properties": {
+        "agentOutcome": { "$ref": "#/definitions/agentOutcome" },
+        "verificationResults": { "type": "array", "items": { "$ref": "#/definitions/verificationResult" } }
+      }
+    }
+  },
+  "definitions": {
+    "text": { "type": "string", "pattern": "\\S" },
+    "strings": { "type": "array", "items": { "type": "string" } },
+    "metadata": { "type": "object", "additionalProperties": true },
+    "workRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "source", "repository", "objective", "constraints", "acceptanceCriteria", "metadata"],
+      "properties": {
+        "id": { "$ref": "#/definitions/text" },
+        "source": {
+          "type": "object", "additionalProperties": false,
+          "required": ["provider", "externalId"],
+          "properties": {
+            "provider": { "$ref": "#/definitions/text" },
+            "externalId": { "$ref": "#/definitions/text" },
+            "url": { "$ref": "#/definitions/text" }
+          }
+        },
+        "repository": {
+          "type": "object", "additionalProperties": false,
+          "required": ["url", "baseRef"],
+          "properties": {
+            "url": { "$ref": "#/definitions/text" },
+            "baseRef": { "$ref": "#/definitions/text" }
+          }
+        },
+        "objective": { "$ref": "#/definitions/text" },
+        "constraints": { "$ref": "#/definitions/strings" },
+        "acceptanceCriteria": { "$ref": "#/definitions/strings" },
+        "metadata": { "$ref": "#/definitions/metadata" }
+      }
+    },
+    "evidence": { "type": "array", "items": { "$ref": "#/definitions/evidenceRef" } },
+    "evidenceRef": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "kind", "uri"],
+      "properties": {
+        "id": { "$ref": "#/definitions/text" },
+        "kind": { "enum": ["file", "command_output", "test_result", "git_diff", "commit", "pull_request", "ci_run", "human_decision", "runtime_observation", "other"] },
+        "uri": { "$ref": "#/definitions/text" },
+        "digest": { "$ref": "#/definitions/text" },
+        "metadata": { "$ref": "#/definitions/metadata" }
+      }
+    },
+    "decisionRequest": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "runId", "unitId", "question", "reason", "impact", "reversible", "evidence"],
+      "properties": {
+        "id": { "$ref": "#/definitions/text" },
+        "runId": { "$ref": "#/definitions/text" },
+        "unitId": { "$ref": "#/definitions/text" },
+        "question": { "$ref": "#/definitions/text" },
+        "reason": { "$ref": "#/definitions/text" },
+        "options": {
+          "type": "array",
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["id", "description", "consequences"],
+            "properties": {
+              "id": { "$ref": "#/definitions/text" },
+              "description": { "$ref": "#/definitions/text" },
+              "consequences": { "$ref": "#/definitions/strings" }
+            }
+          }
+        },
+        "impact": { "$ref": "#/definitions/strings" },
+        "reversible": { "type": "boolean" },
+        "evidence": { "$ref": "#/definitions/evidence" }
+      }
+    },
+    "agentOutcome": {
+      "oneOf": [
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["kind", "summary", "evidence"],
+          "properties": {
+            "kind": { "const": "completed" },
+            "summary": { "$ref": "#/definitions/text" },
+            "evidence": { "$ref": "#/definitions/evidence" }
+          }
+        },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["kind", "decision"],
+          "properties": {
+            "kind": { "const": "decision_required" },
+            "decision": { "$ref": "#/definitions/decisionRequest" }
+          }
+        },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["kind", "reason", "evidence"],
+          "properties": {
+            "kind": { "enum": ["blocked", "failed"] },
+            "reason": { "$ref": "#/definitions/text" },
+            "evidence": { "$ref": "#/definitions/evidence" }
+          }
+        }
+      ]
+    },
+    "verificationContract": {
+      "type": "object", "additionalProperties": false,
+      "required": ["required", "completionPolicy"],
+      "properties": {
+        "required": {
+          "type": "array", "minItems": 1,
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["kind", "id", "command"],
+            "properties": {
+              "kind": { "const": "command" },
+              "id": { "$ref": "#/definitions/text" },
+              "command": { "$ref": "#/definitions/text" },
+              "cwd": { "$ref": "#/definitions/text" },
+              "timeoutSeconds": { "type": "number", "exclusiveMinimum": 0 }
+            }
+          }
+        },
+        "completionPolicy": {
+          "type": "object", "additionalProperties": false,
+          "required": ["requireAll"],
+          "properties": { "requireAll": { "const": true } }
+        }
+      }
+    },
+    "verificationResult": {
+      "type": "object", "additionalProperties": false,
+      "required": ["specId", "status", "evidence", "summary"],
+      "properties": {
+        "specId": { "$ref": "#/definitions/text" },
+        "status": { "enum": ["passed", "failed", "error"] },
+        "evidence": { "$ref": "#/definitions/evidence" },
+        "summary": { "$ref": "#/definitions/text" }
+      }
+    }
+  }
+}

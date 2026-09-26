@@ -1,0 +1,108 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://swf.local/schemas/p0/cli-result.schema.json",
+  "title": "P0 CLI result",
+  "oneOf": [
+    {
+      "type": "object", "additionalProperties": false, "required": ["kind"],
+      "properties": { "kind": { "const": "not_implemented" } }
+    },
+    {
+      "type": "object", "additionalProperties": false, "required": ["kind", "issues", "events"],
+      "properties": {
+        "kind": { "const": "input_error" },
+        "issues": { "type": "array", "minItems": 1, "items": { "$ref": "#/definitions/text" } },
+        "events": { "type": "array", "maxItems": 0 }
+      }
+    },
+    {
+      "type": "object", "additionalProperties": false, "required": ["kind", "graph", "state", "events"],
+      "properties": {
+        "kind": { "const": "run_result" },
+        "graph": {
+          "type": "object", "additionalProperties": false, "required": ["id", "requestId", "units", "dependencies"],
+          "properties": {
+            "id": { "$ref": "#/definitions/text" },
+            "requestId": { "$ref": "#/definitions/text" },
+            "units": { "type": "array", "minItems": 1, "maxItems": 1, "items": { "$ref": "#/definitions/unit" } },
+            "dependencies": { "type": "array", "maxItems": 0 }
+          }
+        },
+        "state": { "$ref": "#/definitions/state" },
+        "events": { "type": "array", "items": { "$ref": "#/definitions/event" } }
+      }
+    }
+  ],
+  "definitions": {
+    "text": { "type": "string", "pattern": "\\S" },
+    "status": { "enum": ["PENDING", "READY", "RUNNING", "WAITING_FOR_DECISION", "VERIFYING", "VERIFIED", "REPAIR_READY", "FAILED"] },
+    "results": { "type": "array", "items": { "$ref": "run-fixture.schema.json#/definitions/verificationResult" } },
+    "unit": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "objective", "constraints", "metadata", "verification"],
+      "properties": {
+        "id": { "$ref": "#/definitions/text" }, "objective": { "$ref": "#/definitions/text" },
+        "constraints": { "$ref": "run-fixture.schema.json#/definitions/strings" },
+        "metadata": { "$ref": "run-fixture.schema.json#/definitions/metadata" },
+        "verification": { "$ref": "run-fixture.schema.json#/definitions/verificationContract" }
+      }
+    },
+    "state": {
+      "oneOf": [
+        {
+          "type": "object", "additionalProperties": false, "required": ["status", "unit"],
+          "properties": { "status": { "enum": ["PENDING", "READY", "RUNNING", "VERIFYING"] }, "unit": { "$ref": "#/definitions/unit" } }
+        },
+        {
+          "type": "object", "additionalProperties": false, "required": ["status", "unit", "decision"],
+          "properties": {
+            "status": { "const": "WAITING_FOR_DECISION" }, "unit": { "$ref": "#/definitions/unit" },
+            "decision": { "$ref": "run-fixture.schema.json#/definitions/decisionRequest" }
+          }
+        },
+        {
+          "type": "object", "additionalProperties": false, "required": ["status", "unit", "results"],
+          "properties": { "status": { "enum": ["VERIFIED", "REPAIR_READY"] }, "unit": { "$ref": "#/definitions/unit" }, "results": { "$ref": "#/definitions/results" } }
+        },
+        {
+          "type": "object", "additionalProperties": false, "required": ["status", "unit", "reason"],
+          "properties": { "status": { "const": "FAILED" }, "unit": { "$ref": "#/definitions/unit" }, "reason": { "$ref": "#/definitions/text" } }
+        }
+      ]
+    },
+    "event": {
+      "oneOf": [
+        {
+          "type": "object", "additionalProperties": false, "required": ["type", "graphId", "unitIds"],
+          "properties": {
+            "type": { "const": "WorkGraphCreated" }, "graphId": { "$ref": "#/definitions/text" },
+            "unitIds": { "type": "array", "minItems": 1, "maxItems": 1, "items": { "$ref": "#/definitions/text" } }
+          }
+        },
+        {
+          "type": "object", "additionalProperties": false, "required": ["type", "unitId", "from", "to"],
+          "properties": { "type": { "const": "UnitStateChanged" }, "unitId": { "$ref": "#/definitions/text" }, "from": { "$ref": "#/definitions/status" }, "to": { "$ref": "#/definitions/status" } }
+        },
+        {
+          "type": "object", "additionalProperties": false, "required": ["type", "unitId"],
+          "properties": { "type": { "const": "AgentInvocationStarted" }, "unitId": { "$ref": "#/definitions/text" } }
+        },
+        {
+          "type": "object", "additionalProperties": false, "required": ["type", "unitId", "outcome"],
+          "properties": { "type": { "const": "AgentInvocationFinished" }, "unitId": { "$ref": "#/definitions/text" }, "outcome": { "$ref": "run-fixture.schema.json#/definitions/agentOutcome" } }
+        },
+        {
+          "type": "object", "additionalProperties": false, "required": ["type", "unitId", "specIds"],
+          "properties": {
+            "type": { "const": "VerificationStarted" }, "unitId": { "$ref": "#/definitions/text" },
+            "specIds": { "type": "array", "items": { "$ref": "#/definitions/text" } }
+          }
+        },
+        {
+          "type": "object", "additionalProperties": false, "required": ["type", "unitId", "results"],
+          "properties": { "type": { "const": "VerificationFinished" }, "unitId": { "$ref": "#/definitions/text" }, "results": { "$ref": "#/definitions/results" } }
+        }
+      ]
+    }
+  }
+}
