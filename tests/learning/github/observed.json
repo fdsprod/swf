@@ -1,0 +1,325 @@
+{
+  "observedAt": "2026-09-26T05:27:27.527Z",
+  "node": "v22.22.3",
+  "ghVersion": "gh version 2.92.0 (2026-04-28)",
+  "login": "fdsprod",
+  "issue": {
+    "bodyType": "string",
+    "comments": 0,
+    "id": 5576323347,
+    "isPullRequest": true,
+    "number": 14517,
+    "state": "closed",
+    "title": "Mention gh CLI in the README intro",
+    "user": {
+      "id": 47394200,
+      "login": "BagToad"
+    }
+  },
+  "comments": {
+    "issueNumber": 14522,
+    "pageCount": 2,
+    "records": [
+      {
+        "id": 5840612926,
+        "author": {
+          "id": 280752616,
+          "login": "cli-triage[bot]"
+        },
+        "createdAt": "2026-09-25T22:36:46Z",
+        "updatedAt": "2026-09-25T22:36:46Z",
+        "bodyType": "string"
+      },
+      {
+        "id": 5843229673,
+        "author": {
+          "id": 1611510,
+          "login": "williammartin"
+        },
+        "createdAt": "2026-09-26T04:39:11Z",
+        "updatedAt": "2026-09-26T04:39:11Z",
+        "bodyType": "string"
+      }
+    ]
+  },
+  "slurpWithJq": {
+    "exitCode": 1,
+    "firstErrorLine": "the `--slurp` option is not supported with `--jq` or `--template`"
+  },
+  "pr": {
+    "base": {
+      "ref": "trunk",
+      "sha": "b6770c8bc54c72e74e785c307850446b8e10be9d"
+    },
+    "head": {
+      "ref": "bagtoad/readme-seo",
+      "repo": "cli/cli",
+      "sha": "362a5eb03dcc16af5e313ab8ae5a0cfdc4569e46"
+    },
+    "number": 14517,
+    "state": "closed"
+  },
+  "prReconciliationQuery": [
+    {
+      "number": 14517,
+      "state": "closed",
+      "headSha": "362a5eb03dcc16af5e313ab8ae5a0cfdc4569e46"
+    }
+  ],
+  "checkRuns": [
+    {
+      "id": 107892447593,
+      "name": "close-unmet-requirements",
+      "headSha": "362a5eb03dcc16af5e313ab8ae5a0cfdc4569e46",
+      "status": "completed",
+      "conclusion": "skipped",
+      "appId": 15368,
+      "appSlug": "github-actions"
+    },
+    {
+      "id": 107892445341,
+      "name": "check-requirements / close-unmet-requirements",
+      "headSha": "362a5eb03dcc16af5e313ab8ae5a0cfdc4569e46",
+      "status": "completed",
+      "conclusion": "skipped",
+      "appId": 15368,
+      "appSlug": "github-actions"
+    },
+    {
+      "id": 107892437895,
+      "name": "check-requirements / check-requirements",
+      "headSha": "362a5eb03dcc16af5e313ab8ae5a0cfdc4569e46",
+      "status": "completed",
+      "conclusion": "skipped",
+      "appId": 15368,
+      "appSlug": "github-actions"
+    },
+    {
+      "id": 107892437097,
+      "name": "copilot-pull-request-reviewer",
+      "headSha": "362a5eb03dcc16af5e313ab8ae5a0cfdc4569e46",
+      "status": "completed",
+      "conclusion": "success",
+      "appId": 15368,
+      "appSlug": "github-actions"
+    },
+    {
+      "id": 107892413964,
+      "name": "integration-tests (macos-latest)",
+      "headSha": "362a5eb03dcc16af5e313ab8ae5a0cfdc4569e46",
+      "status": "completed",
+      "conclusion": "success",
+      "appId": 15368,
+      "appSlug": "github-actions"
+    },
+    {
+      "id": 107892413938,
+      "name": "integration-tests (windows-latest)",
+      "headSha": "362a5eb03dcc16af5e313ab8ae5a0cfdc4569e46",
+      "status": "completed",
+      "conclusion": "success",
+      "appId": 15368,
+      "appSlug": "github-actions"
+    },
+    {
+      "id": 107892413901,
+      "name": "build (ubuntu-latest)",
+      "headSha": "362a5eb03dcc16af5e313ab8ae5a0cfdc4569e46",
+      "status": "completed",
+      "conclusion": "success",
+      "appId": 15368,
+      "appSlug": "github-actions"
+    },
+    {
+      "id": 107892413815,
+      "name": "integration-tests (ubuntu-latest)",
+      "headSha": "362a5eb03dcc16af5e313ab8ae5a0cfdc4569e46",
+      "status": "completed",
+      "conclusion": "success",
+      "appId": 15368,
+      "appSlug": "github-actions"
+    },
+    {
+      "id": 107892413799,
+      "name": "build (windows-latest)",
+      "headSha": "362a5eb03dcc16af5e313ab8ae5a0cfdc4569e46",
+      "status": "completed",
+      "conclusion": "success",
+      "appId": 15368,
+      "appSlug": "github-actions"
+    },
+    {
+      "id": 107892413759,
+      "name": "build (macos-latest)",
+      "headSha": "362a5eb03dcc16af5e313ab8ae5a0cfdc4569e46",
+      "status": "completed",
+      "conclusion": "success",
+      "appId": 15368,
+      "appSlug": "github-actions"
+    },
+    {
+      "id": 107892412932,
+      "name": "ready-for-review",
+      "headSha": "362a5eb03dcc16af5e313ab8ae5a0cfdc4569e46",
+      "status": "completed",
+      "conclusion": "skipped",
+      "appId": 15368,
+      "appSlug": "github-actions"
+    },
+    {
+      "id": 107892412837,
+      "name": "close-from-default-branch / close-from-default-branch",
+      "headSha": "362a5eb03dcc16af5e313ab8ae5a0cfdc4569e46",
+      "status": "completed",
+      "conclusion": "skipped",
+      "appId": 15368,
+      "appSlug": "github-actions"
+    },
+    {
+      "id": 107892412543,
+      "name": "close-no-help-wanted",
+      "headSha": "362a5eb03dcc16af5e313ab8ae5a0cfdc4569e46",
+      "status": "completed",
+      "conclusion": "skipped",
+      "appId": 15368,
+      "appSlug": "github-actions"
+    },
+    {
+      "id": 107892411616,
+      "name": "label-external / label_issues",
+      "headSha": "362a5eb03dcc16af5e313ab8ae5a0cfdc4569e46",
+      "status": "completed",
+      "conclusion": "success",
+      "appId": 15368,
+      "appSlug": "github-actions"
+    }
+  ],
+  "combinedStatus": {
+    "sha": "362a5eb03dcc16af5e313ab8ae5a0cfdc4569e46",
+    "state": "pending",
+    "statuses": [],
+    "total_count": 0
+  },
+  "prChecks": {
+    "exitCode": 0,
+    "records": [
+      {
+        "bucket": "pass",
+        "link": "https://github.com/cli/cli/actions/runs/36077663398/job/107892413964",
+        "name": "integration-tests (macos-latest)",
+        "state": "SUCCESS",
+        "workflow": "Unit and Integration Tests"
+      },
+      {
+        "bucket": "pass",
+        "link": "https://github.com/cli/cli/actions/runs/36077663398/job/107892413759",
+        "name": "build (macos-latest)",
+        "state": "SUCCESS",
+        "workflow": "Unit and Integration Tests"
+      },
+      {
+        "bucket": "skipping",
+        "link": "https://github.com/cli/cli/actions/runs/36077662340/job/107892447593",
+        "name": "close-unmet-requirements",
+        "state": "SKIPPED",
+        "workflow": "PR Triaging"
+      },
+      {
+        "bucket": "skipping",
+        "link": "https://github.com/cli/cli/actions/runs/36077662340/job/107892445341",
+        "name": "check-requirements / close-unmet-requirements",
+        "state": "SKIPPED",
+        "workflow": "PR Triaging"
+      },
+      {
+        "bucket": "skipping",
+        "link": "https://github.com/cli/cli/actions/runs/36077662340/job/107892437895",
+        "name": "check-requirements / check-requirements",
+        "state": "SKIPPED",
+        "workflow": "PR Triaging"
+      },
+      {
+        "bucket": "pass",
+        "link": "https://github.com/cli/cli/actions/runs/36077663398/job/107892413938",
+        "name": "integration-tests (windows-latest)",
+        "state": "SUCCESS",
+        "workflow": "Unit and Integration Tests"
+      },
+      {
+        "bucket": "pass",
+        "link": "https://github.com/cli/cli/actions/runs/36077663398/job/107892413815",
+        "name": "integration-tests (ubuntu-latest)",
+        "state": "SUCCESS",
+        "workflow": "Unit and Integration Tests"
+      },
+      {
+        "bucket": "pass",
+        "link": "https://github.com/cli/cli/actions/runs/36077663398/job/107892413799",
+        "name": "build (windows-latest)",
+        "state": "SUCCESS",
+        "workflow": "Unit and Integration Tests"
+      },
+      {
+        "bucket": "pass",
+        "link": "https://github.com/cli/cli/actions/runs/36077662340/job/107892411616",
+        "name": "label-external / label_issues",
+        "state": "SUCCESS",
+        "workflow": "PR Triaging"
+      },
+      {
+        "bucket": "pass",
+        "link": "https://github.com/cli/cli/actions/runs/36077663398/job/107892413901",
+        "name": "build (ubuntu-latest)",
+        "state": "SUCCESS",
+        "workflow": "Unit and Integration Tests"
+      },
+      {
+        "bucket": "skipping",
+        "link": "https://github.com/cli/cli/actions/runs/36077662340/job/107892412837",
+        "name": "close-from-default-branch / close-from-default-branch",
+        "state": "SKIPPED",
+        "workflow": "PR Triaging"
+      },
+      {
+        "bucket": "skipping",
+        "link": "https://github.com/cli/cli/actions/runs/36077662340/job/107892412543",
+        "name": "close-no-help-wanted",
+        "state": "SKIPPED",
+        "workflow": "PR Triaging"
+      },
+      {
+        "bucket": "skipping",
+        "link": "https://github.com/cli/cli/actions/runs/36077662340/job/107892412932",
+        "name": "ready-for-review",
+        "state": "SKIPPED",
+        "workflow": "PR Triaging"
+      }
+    ]
+  },
+  "requiredPrChecks": [
+    {
+      "bucket": "pass",
+      "name": "build (macos-latest)",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "name": "build (windows-latest)",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "name": "build (ubuntu-latest)",
+      "state": "SUCCESS"
+    }
+  ],
+  "notFound": {
+    "exitCode": 1,
+    "body": {
+      "message": "Not Found",
+      "documentation_url": "https://docs.github.com/rest/issues/issues#get-an-issue",
+      "status": "404"
+    },
+    "stderr": "gh: Not Found (HTTP 404)"
+  }
+}
