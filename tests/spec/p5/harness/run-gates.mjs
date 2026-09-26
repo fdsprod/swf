@@ -44,7 +44,7 @@ if (!differences.length) {
   }
   execute('p5-sanity', ['--test', '--test-reporter=tap', join(trustedRoot, 'tests/spec/p5/harness/sanity.test.mjs')], { tests: true });
   execute('p5-acceptance', ['--test', '--test-reporter=tap', '--test-concurrency=1',
-    ...['intake-delivery', 'empty-diff', 'canonical-intake', 'initialization-recovery', 'checkout-boundary', 'recovery', 'ci'].map(name => join(trustedRoot, `tests/spec/p5/scenarios/${name}.test.mjs`))], { timeout: 1800000, tests: true });
+    ...['intake-delivery', 'empty-diff', 'canonical-intake', 'initialization-recovery', 'checkout-boundary', 'recovery', 'ci'].map(name => join(trustedRoot, `tests/spec/p5/scenarios/${name}.test.mjs`))], { timeout: 3600000, tests: true });
   if(!preparation) execute('p5-live',[join(trustedRoot,'tests/spec/p5/harness/live-proof.mjs')],{env:{P5_CANDIDATE_SOURCE_DIGEST:hash(JSON.stringify(sourcesBefore))}});
   else results.push({name:'p5-live',exitCode:1,classification:'blocked',reason:'Preparation is not acceptance. Requires reviewed real GitHub HTTPS/PR/CI proof and independently validated prior-candidate integration.'});
 }

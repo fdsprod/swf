@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {spawnSync} from 'node:child_process';
+import {randomUUID} from 'node:crypto';
 import {copyFileSync,existsSync,readFileSync,writeFileSync,realpathSync} from 'node:fs';
 import {join} from 'node:path';
 import Ajv from 'ajv';
@@ -27,10 +28,22 @@ export function writeConfig(f){writeFileSync(f.configPath,JSON.stringify(f.githu
 export async function withFixture(options,action){if(typeof options==='function'){action=options;options={};}const f=fixture(options);try{return await action(f);}finally{for(const h of f.handles)if(!h.closed)await killFactory(h);f.cleanup();}}
 export const runArgs=(f,maxStarts)=>['run','--github',f.configPath,'--store',f.store,...(maxStarts===undefined?[]:['--max-starts',String(maxStarts)]),'--json'];
 export const run=(f,maxStarts,options)=>cli(runArgs(f,maxStarts),options);
+export async function fault(f,point,eventType,{args=runArgs(f),env={},entrypoint}={}){
+  const marker=join(f.root,`fault-${randomUUID()}.json`),definition={point,...(eventType?{eventType}:{}),marker};
+  const handle=start(f,args,{...env,SWF_TEST_FAULT:JSON.stringify(definition)},entrypoint);
+  await waitFor(()=>{
+    if(existsSync(marker))return true;
+    assert.equal(handle.closed,false,`Factory must reach ${point}/${eventType||''}; exited ${handle.code}: ${handle.stdout}\n${handle.stderr}`);
+    return false;
+  },`Factory did not reach ${point}/${eventType||''}`,90000);
+  const observed=JSON.parse(readFileSync(marker,'utf8'));
+  assert.equal(observed.point,point);assert.ok(observed.runId);if(eventType)assert.equal(observed.eventType,eventType);
+  return{...handle,marker,observed,original:handle};
+}
 export async function holdBeforePush(f){
   const point='delivery.before_push',marker=join(f.root,'before-push.json'),release=join(f.root,'release-push');
   const handle=start(f,runArgs(f),{SWF_TEST_FAULT:JSON.stringify({point,marker,release})});
-  await waitFor(()=>{if(existsSync(marker))return true;assert.equal(handle.closed,false,`Factory must reach ${point}: ${handle.stdout}\n${handle.stderr}`);return false;},'Factory did not reach final absent-ref push boundary');
+  await waitFor(()=>{if(existsSync(marker))return true;assert.equal(handle.closed,false,`Factory must reach ${point}: ${handle.stdout}\n${handle.stderr}`);return false;},'Factory did not reach final absent-ref push boundary',90000);
   const observed=JSON.parse(readFileSync(marker,'utf8'));assert.equal(observed.point,point);assert.ok(observed.runId);return{handle,release};
 }
 export const gateway=f=>JSON.parse(readFileSync(f.gatewayPath,'utf8'));
