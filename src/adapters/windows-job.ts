@@ -8,7 +8,7 @@ import { artifact, hash } from "./local-files.js";
 // The helper owns the Job handle. The owner handle binds it to the factory lifetime.
 const helper = String.raw`param([string]$Config)
 $ErrorActionPreference = 'Stop'
-$c = Get-Content -LiteralPath $Config -Raw | ConvertFrom-Json
+$c = Get-Content -LiteralPath $Config -Raw -Encoding UTF8 | ConvertFrom-Json
 Add-Type -TypeDefinition @'
 using System;
 using System.IO;
