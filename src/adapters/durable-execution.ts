@@ -3,9 +3,11 @@ import { mkdir, readFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { randomUUID } from "node:crypto";
 import type { Artifact, LocalEvidence, LocalWorkspace, ProcessRecord } from "../contracts/local.js";
-import type { DurableAttempt, DurableProjection, ProcessIdentity, WorkerCompletion } from "../contracts/durable.js";
+import type { DurableAttempt, DurableEvent, DurableProjection, ProcessIdentity, WorkerCompletion } from "../contracts/durable.js";
+import type { DecisionWorkerInput } from "../contracts/decisions.js";
+import type { RepairContext, RepairReservation } from "../contracts/repair.js";
 import type { VerificationResult } from "../contracts/index.js";
-import { durableVerdict, stable } from "../kernel/durable.js";
+import { durableVerdict, replay, stable } from "../kernel/durable.js";
 import { artifact, canonical, captureDiff, changes, contractDigest, git, hash, programs, save, snapshot } from "./local-files.js";
 import { commandResult, executeRestricted, outcome, workerArgs } from "./local-execution.js";
 import { jobIsStopped } from "./windows-job.js";
@@ -53,13 +55,63 @@ async function baseSnapshot(workspace: LocalWorkspace): Promise<LocalEvidence["c
   }
   files.sort((a, b) => a.path.localeCompare(b.path)); return { digest: hash(JSON.stringify(files)), files };
 }
-export async function performWorker(p: DurableProjection, a: DurableAttempt, started: (identity: ProcessIdentity) => Promise<void>): Promise<WorkerCompletion> {
+async function repairEvidence(reservation: RepairReservation, events: DurableEvent[]): Promise<LocalEvidence> {
+  const index = events.findIndex(e => e.fact.type === "VerificationCompleted" && e.fact.operationId === reservation.failedVerificationId);
+  if (index < 0) throw new Error("Missing repair source verification");
+  const source = replay(events.slice(0, index + 1));
+  if (source.state.status !== "REPAIR_READY" || source.verification.kind !== "completed" || stable(source.verification.evidence) !== stable(reservation.evidence)) throw new Error("Repair source is not the recorded failed verification");
+  await checkArtifact(reservation.evidence);
+  const evidence = await validateManifest(source, reservation.evidence.path, "historical");
+  if (stable(evidence.verdict) !== stable(source.state)) throw new Error("Repair evidence disagrees with durable verification results");
+  return evidence;
+}
+export async function checkRepairArtifacts(p: DurableProjection, events: DurableEvent[]): Promise<void> {
+  for (const reservation of p.repairs ?? []) await repairEvidence(reservation, events);
+}
+export async function checkInitialRepairCandidate(p: DurableProjection, a: DurableAttempt, events: DurableEvent[], recoveredArtifacts: Artifact[] = []): Promise<void> {
+  const origin = p.repairs?.findLast(r => r.attempt.ordinal <= a.ordinal);
+  if (!origin) return;
+  const startedPath = (attempt: DurableAttempt) => join(dirname(attempt.completionPath), "worker.started.json");
+  const dispatched = recoveredArtifacts.some(ref => ref.path === startedPath(a)) || p.attempts.some(prior =>
+    prior.ordinal >= origin.attempt.ordinal && prior.ordinal <= a.ordinal &&
+    (prior.kind === "running" || prior.kind === "completed" || (prior.kind === "interrupted" && prior.artifacts.some(ref => ref.path === startedPath(prior)))));
+  if (dispatched) return;
+  const evidence = await repairEvidence(origin, events);
+  if (stable(await snapshot(evidence.workspace.path)) !== stable(evidence.candidate)) throw new Error("Candidate changed before the first repair dispatch");
+}
+async function workerInput(p: DurableProjection, a: DurableAttempt, events: DurableEvent[]): Promise<string> {
+  const config = p.contract.config, unit = p.graph.units[0]!;
+  if (!config.decisions && !config.repair) return JSON.stringify({ request: config.request, unit });
+  if (p.workspace.kind !== "ready") throw new Error("Worker context requires a ready workspace");
+  const input: DecisionWorkerInput = {
+    schemaVersion: 1, runId: p.runId, attemptId: a.id, workspace: p.workspace.workspace,
+    context: {
+      request: config.request, unit, priorAttempts: p.attempts.filter(prior => prior.ordinal < a.ordinal),
+      decisions: (p.decisions ?? []).flatMap(d => d.kind === "resolved" ? [d.resolution] : []),
+      evidence: p.attempts.flatMap(prior => prior.kind === "completed" && prior.ordinal < a.ordinal ? [{ id: prior.id, kind: "file" as const, uri: prior.record.path, digest: prior.record.digest }] : []),
+      repositoryContext: [{ path: p.workspace.workspace.path, baseCommit: p.baseCommit }],
+    },
+  };
+  const origin = p.repairs?.findLast(r => r.attempt.ordinal <= a.ordinal);
+  if (origin) {
+    const evidence = await repairEvidence(origin, events);
+    if (evidence.verdict.status !== "REPAIR_READY") throw new Error("Invalid repair verdict");
+    const repair: RepairContext = { repairId: origin.repairId, failedVerificationId: origin.failedVerificationId, failedAttemptId: evidence.attemptId, evidence: origin.evidence, results: evidence.verdict.results, commands: [] };
+    for (const command of evidence.commands) repair.commands.push({ ...command, stdoutBase64: (await readFile(command.process.stdout.path)).toString("base64"), stderrBase64: (await readFile(command.process.stderr.path)).toString("base64") });
+    input.context.repair = repair;
+    input.context.evidence.push({ id: origin.failedVerificationId, kind: "test_result", uri: origin.evidence.path, digest: origin.evidence.digest });
+  }
+  return JSON.stringify(input);
+}
+export async function performWorker(p: DurableProjection, a: DurableAttempt, started: (identity: ProcessIdentity) => Promise<void>, events: DurableEvent[] = []): Promise<WorkerCompletion> {
   if (p.workspace.kind !== "ready") throw new Error("Worker requires a ready workspace");
   const config = p.contract.config, workspace = p.workspace.workspace, directory = dirname(a.completionPath);
   await mkdir(directory, { recursive: true });
   const schema = await save(join(directory, "worker-schema.json"), (config.decisions ? await readFile(new URL("../contracts/schemas/decision-wire.schema.json", import.meta.url), "utf8") : JSON.stringify({ type: "object", additionalProperties: false, required: ["kind", "message"], properties: { kind: { type: "string", enum: ["completed", "blocked", "failed"] }, message: { type: "string" } } })));
   const args = workerArgs(config, workspace.path, commonGit(workspace), schema.path);
-  const record = await executeRestricted(config, workspace.path, commonGit(workspace), directory, "worker", config.worker.executable, args, config.worker.timeoutSeconds, undefined, JSON.stringify(config.decisions ? { schemaVersion: 1, runId: p.runId, attemptId: a.id, workspace, context: { request: config.request, unit: p.graph.units[0], priorAttempts: p.attempts.filter(prior => prior.id !== a.id), decisions: (p.decisions ?? []).flatMap(d => d.kind === "resolved" ? [d.resolution] : []), evidence: p.attempts.flatMap(prior => prior.kind === "completed" ? [{ id: prior.id, kind: "file", uri: prior.record.path, digest: prior.record.digest }] : []), repositoryContext: [{ path: workspace.path, baseCommit: p.baseCommit }] } } : { request: config.request, unit: p.graph.units[0] }), resolve(config.worker.executable).toLowerCase() === resolve(config.sandboxExecutable).toLowerCase(), workspace.path, started);
+  let input: string;
+  try { await checkInitialRepairCandidate(p, a, events); input = await workerInput(p, a, events); } catch (error) { throw new DurableError("artifact_invalid", String(error)); }
+  const record = await executeRestricted(config, workspace.path, commonGit(workspace), directory, "worker", config.worker.executable, args, config.worker.timeoutSeconds, undefined, input, resolve(config.worker.executable).toLowerCase() === resolve(config.sandboxExecutable).toLowerCase(), workspace.path, started);
   let result = await outcome(record, config.decisions ? { runId: p.runId, unitId: p.graph.units[0]!.id, attemptId: a.id } : undefined);
   try {
     const changed = changes(await baseSnapshot(workspace), await snapshot(workspace.path));
@@ -127,14 +179,14 @@ export async function verify(p: DurableProjection, faults: Faults): Promise<Loca
   const evidence: LocalEvidence = { schemaVersion: 1, kind: "local_evidence", attemptId: a.id, workspace, candidate, contract: p.contract, worker: { process: worker.process, outcome: worker.outcome }, commands, changedPaths, diff: diff.artifact, verdict: durableVerdict(p.graph.units[0]!, results, issues) };
   await atomicWrite(p.verification.evidencePath, evidence); return evidence;
 }
-export async function validateManifest(p: DurableProjection, path: string): Promise<LocalEvidence> {
+export async function validateManifest(p: DurableProjection, path: string, scope: "current" | "historical" = "current"): Promise<LocalEvidence> {
   const value: unknown = JSON.parse(await readFile(path, "utf8")); validateStored("evidence", value); const e = value as LocalEvidence;
   if (p.workspace.kind !== "ready" || p.verification.kind === "idle" || e.attemptId !== p.verification.attemptId || stable(e.contract) !== stable(p.contract) || stable(e.workspace) !== stable(p.workspace.workspace)) throw new Error("Evidence does not match recorded intent");
   const a = p.attempts.at(-1)!; if (a.kind !== "completed") throw new Error("Evidence has no completed worker");
   const worker = await completion(a.record.path, a.id, p);
   if (stable(e.worker) !== stable({ process: worker.process, outcome: worker.outcome })) throw new Error("Manifest worker record changed");
   await reconcileWorkspace(e.workspace); await checkPrograms(p);
-  if (stable(await snapshot(e.workspace.path)) !== stable(e.candidate)) throw new Error("Candidate content changed");
+  if (scope === "current" && stable(await snapshot(e.workspace.path)) !== stable(e.candidate)) throw new Error("Candidate content changed");
   for (const ref of [e.diff, e.worker.process.stdout, e.worker.process.stderr, ...e.commands.flatMap(c => [c.process.stdout, c.process.stderr])]) await checkArtifact(ref);
   const diff: unknown = JSON.parse(await readFile(e.diff.path, "utf8"));
   if (!diff || typeof diff !== "object" || !("issues" in diff) || !Array.isArray(diff.issues) || diff.issues.some(issue => typeof issue !== "string")) throw new Error("Invalid required diff evidence");

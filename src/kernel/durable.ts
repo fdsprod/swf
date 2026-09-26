@@ -31,6 +31,7 @@ export function replay(events: DurableEvent[]): DurableProjection {
       requireFact(event.runId !== request.id && stable(fact.graph) === stable(graph), "Invalid run graph");
       p = { schemaVersion: 1, runId: event.runId, sequence: event.sequence, contract: fact.contract, graph, baseCommit: fact.baseCommit, maxStarts: fact.maxStarts, state: { status: "PENDING", unit }, workspace: { kind: "unplanned" }, attempts: [], verification: { kind: "idle" } };
       if (fact.contract.config.decisions) p.decisions = [];
+      if (fact.contract.config.repair) p.repairs = [];
       continue;
     }
     requireFact(event.runId === p.runId, "Run identity changed"); p.sequence = event.sequence;
@@ -39,6 +40,17 @@ export function replay(events: DurableEvent[]): DurableProjection {
     const identity = (a: DurableAttempt) => ({ id: a.id, ordinal: a.ordinal, completionPath: a.completionPath });
     const replace = (a: DurableAttempt): void => { p!.attempts[p!.attempts.length - 1] = a; };
     switch (fact.type) {
+      case "RepairReserved": {
+        requireFact(p.contract.config.repair && p.repairs && p.state.status === "REPAIR_READY" && p.verification.kind === "completed", "Repair requires completed failed verification");
+        requireFact(p.repairs.length < (p.contract.config.repair.maxRepairs ?? 1) && p.attempts.length < p.maxStarts, "Repair budget exhausted");
+        requireFact(!p.decisions?.some(d => d.kind !== "resolved"), "Repair cannot bypass a decision");
+        requireFact(fact.failedVerificationId === p.verification.operationId && stable(fact.evidence) === stable(p.verification.evidence) && !p.repairs.some(r => r.failedVerificationId === fact.failedVerificationId), "Repair source differs from current failed verification");
+        requireFact(fact.attempt.ordinal === p.attempts.length + 1 && !p.attempts.some(a => a.id === fact.attempt.id || a.completionPath === fact.attempt.completionPath), "Invalid repair attempt identity");
+        operation(fact.repairId);
+        const { type: _type, ...reservation } = fact;
+        p.repairs.push(reservation); p.attempts.push({ ...fact.attempt, kind: "reserved" });
+        p.state = { status: "RUNNING", unit }; p.verification = { kind: "idle" }; break;
+      }
       case "WorkspacePlanned":
         requireFact(p.workspace.kind === "unplanned" && p.state.status === "PENDING", "Workspace already planned"); operation(fact.operationId);
         requireFact(fact.workspace.baseCommit === p.baseCommit, "Workspace base mismatch"); p.workspace = { kind: "intent", operationId: fact.operationId, workspace: fact.workspace }; break;
@@ -111,7 +123,8 @@ export function replay(events: DurableEvent[]): DurableProjection {
         requireFact(p.verification.kind === "intent" && p.verification.operationId === fact.operationId && p.verification.evidencePath === fact.evidence.path && p.state.status === "VERIFYING", "Verification completion without intent");
         p.verification = { ...p.verification, kind: "completed", evidence: fact.evidence }; p.state = durableVerdict(unit, fact.results, fact.issues); break;
       case "RunStopped":
-        if (fact.reason === "worker_start_budget_exhausted") requireFact(p.state.status === "READY" && p.attempts.length === p.maxStarts, "Budget exhaustion disagrees with attempts");
+        if (fact.reason === "worker_start_budget_exhausted") requireFact((p.state.status === "READY" || (p.state.status === "REPAIR_READY" && p.contract.config.repair)) && p.attempts.length === p.maxStarts, "Budget exhaustion disagrees with attempts");
+        if (fact.reason === "repair_budget_exhausted") requireFact(p.contract.config.repair && p.state.status === "REPAIR_READY" && p.repairs?.length === (p.contract.config.repair.maxRepairs ?? 1), "Repair exhaustion disagrees with reservations");
         p.state = { status: "FAILED", unit, reason: fact.message }; break;
       default: throw new Error("Unexpected durable event");
     }

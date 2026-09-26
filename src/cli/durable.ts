@@ -7,7 +7,7 @@ import { stable } from "../kernel/durable.js";
 import { artifact, contractDigest, git, programs, within } from "../adapters/local-files.js";
 import { readConfig } from "../adapters/local-config.js";
 import { DurableError, exists, Faults, Store, storePath } from "../adapters/durable-store.js";
-import { checkArtifact, checkHistoryArtifacts, completion, performWorker, reconcileWorker, reconcileWorkspace, validateManifest, verificationFacts, verify } from "../adapters/durable-execution.js";
+import { checkArtifact, checkHistoryArtifacts, checkInitialRepairCandidate, checkRepairArtifacts, completion, performWorker, reconcileWorker, reconcileWorkspace, validateManifest, verificationFacts, verify } from "../adapters/durable-execution.js";
 
 function parse(args: string[]): { command: "run" | "resume" | "status"; store: string; local?: string; limit?: number } {
   const command = args[0]; if (command !== "run" && command !== "resume" && command !== "status") throw new DurableError("input_error", "Unknown durable command");
@@ -57,11 +57,12 @@ export async function durableCommand(args: string[]): Promise<DurableCliResult> 
     await checkPlacement(path, p.contract.config);
     if (options.command === "run" && (stable(supplied) !== stable(p.contract.config) || (options.limit !== undefined && options.limit !== p.maxStarts))) throw new DurableError("config_mismatch", "Run configuration and worker-start limit are immutable");
     const append = async (fact: DurableFact): Promise<void> => { p = await store!.append(p.runId, fact); };
-    try { await checkHistoryArtifacts(p); await auditDecisions(p, store.read().events); } catch (error) { throw new DurableError("artifact_invalid", String(error)); }
+    try { await checkHistoryArtifacts(p); await auditDecisions(p, store.read().events); await checkRepairArtifacts(p, store.read().events); } catch (error) { throw new DurableError("artifact_invalid", String(error)); }
     if (p.verification.kind === "completed") {
       try { await checkArtifact(p.verification.evidence); await validateManifest(p, p.verification.evidencePath); }
       catch (error) { throw new DurableError("artifact_invalid", String(error)); }
-    } else if (p.state.status !== "FAILED" && p.state.status !== "REPAIR_READY") {
+    }
+    if (p.state.status !== "FAILED" && p.state.status !== "VERIFIED" && (p.state.status !== "REPAIR_READY" || p.contract.config.repair)) {
       if (p.workspace.kind === "unplanned") {
         const operationId = randomUUID();
         await append({ type: "WorkspacePlanned", operationId, workspace: { path: join(p.contract.config.workspaceRoot, operationId), repositoryPath: p.contract.config.repositoryPath, baseCommit: p.baseCommit } });
@@ -79,6 +80,8 @@ export async function durableCommand(args: string[]): Promise<DurableCliResult> 
       if (p.workspace.kind === "ready") await reconcileWorkspace(p.workspace.workspace);
       if (p.state.status === "RUNNING") {
         const a = p.attempts.at(-1)!; const artifacts = await reconcileWorker(a);
+        try { await checkInitialRepairCandidate(p, a, store.read().events, artifacts); }
+        catch (error) { throw new DurableError("artifact_invalid", String(error)); }
         if (await exists(a.completionPath)) {
           try {
             const record = await completion(a.completionPath, a.id, p);
@@ -86,38 +89,65 @@ export async function durableCommand(args: string[]): Promise<DurableCliResult> 
           } catch (error) { throw new DurableError("artifact_invalid", String(error)); }
         } else await append({ type: "AttemptInterrupted", attemptId: a.id, reason: "Factory stopped before a trusted worker completion was committed", artifacts });
       }
-      if (p.state.status === "WAITING_FOR_DECISION") await handleDecision(() => p, append, faults);
-      if (p.state.status === "READY") {
-        if (p.attempts.length >= p.maxStarts) await append({ type: "RunStopped", reason: "worker_start_budget_exhausted", message: `Worker-start budget exhausted after ${p.maxStarts} reservations` });
-        else {
-          const id = randomUUID(), attempt = { id, ordinal: p.attempts.length + 1, completionPath: join(p.contract.config.artifactRoot, p.runId, id, "completion.json") };
-          await append({ type: "AttemptReserved", attempt });
-          const record = await performWorker(p, p.attempts.at(-1)!, async process => {
-            await faults.at("worker.after_dispatch", p.runId);
-            await append({ type: "WorkerStarted", attemptId: id, process });
-          });
-          await faults.at("worker.after_completion_artifact", p.runId);
-          await append({ type: "WorkerCompleted", attemptId: id, outcome: record.outcome, record: await artifact(attempt.completionPath) });
+      const attemptIdentity = () => {
+        const id = randomUUID();
+        return { id, ordinal: p.attempts.length + 1, completionPath: join(p.contract.config.artifactRoot, p.runId, id, "completion.json") };
+      };
+      const stopForStarts = async () => append({ type: "RunStopped", reason: "worker_start_budget_exhausted", message: "Worker-start budget exhausted after " + p.maxStarts + " reservations" });
+      const status = () => p.state.status;
+      // Recovery above handles only work inherited from the previous factory. New reservations dispatch here.
+      while (true) {
+        if (status() === "WAITING_FOR_DECISION") {
+          await handleDecision(() => p, append, faults);
+          if (status() === "WAITING_FOR_DECISION") break;
         }
-      }
-      if (p.state.status === "WAITING_FOR_DECISION" && p.decisions?.at(-1)?.kind === "requested") await handleDecision(() => p, append, faults);
-      if (p.state.status === "VERIFYING") {
-        const a = p.attempts.at(-1)!;
-        if (p.verification.kind === "idle") {
-          const operationId = randomUUID();
-          await append({ type: "VerificationPlanned", operationId, attemptId: a.id, evidencePath: join(p.contract.config.artifactRoot, p.runId, a.id, "verification", "evidence.json") });
-        }
-        if (p.verification.kind !== "intent") throw new DurableError("corrupt_store", "Missing verification intent");
-        const operation = p.verification;
-        let evidence;
-        if (await exists(operation.evidencePath)) {
-          try { evidence = await validateManifest(p, operation.evidencePath); }
+        if (status() === "REPAIR_READY") {
+          if (!p.contract.config.repair) break;
+          if (p.verification.kind !== "completed") throw new DurableError("corrupt_store", "Repair requires completed verification");
+          try { await checkArtifact(p.verification.evidence); await validateManifest(p, p.verification.evidencePath); }
           catch (error) { throw new DurableError("artifact_invalid", String(error)); }
-        } else {
-          evidence = await verify(p, faults);
-          await faults.at("verification.after_evidence_artifact", p.runId);
+          if (p.attempts.length >= p.maxStarts) { await stopForStarts(); break; }
+          const limit = p.contract.config.repair.maxRepairs ?? 1;
+          if (p.repairs!.length >= limit) {
+            await append({ type: "RunStopped", reason: "repair_budget_exhausted", message: "Repair budget exhausted after " + limit + " reservations" }); break;
+          }
+          await append({ type: "RepairReserved", repairId: randomUUID(), failedVerificationId: p.verification.operationId, evidence: p.verification.evidence, attempt: attemptIdentity() });
         }
-        await append({ type: "VerificationCompleted", operationId: operation.operationId, ...verificationFacts(evidence), evidence: await artifact(operation.evidencePath) });
+        if (status() === "READY") {
+          if (p.attempts.length >= p.maxStarts) { await stopForStarts(); break; }
+          await append({ type: "AttemptReserved", attempt: attemptIdentity() });
+        }
+        if (status() === "RUNNING") {
+          const attempt = p.attempts.at(-1)!;
+          const record = await performWorker(p, attempt, async process => {
+            await faults.at("worker.after_dispatch", p.runId);
+            await append({ type: "WorkerStarted", attemptId: attempt.id, process });
+          }, store.read().events);
+          await faults.at("worker.after_completion_artifact", p.runId);
+          await append({ type: "WorkerCompleted", attemptId: attempt.id, outcome: record.outcome, record: await artifact(attempt.completionPath) });
+        }
+        if (status() === "WAITING_FOR_DECISION") {
+          await handleDecision(() => p, append, faults); break;
+        }
+        if (status() === "VERIFYING") {
+          const a = p.attempts.at(-1)!;
+          if (p.verification.kind === "idle") {
+            const operationId = randomUUID();
+            await append({ type: "VerificationPlanned", operationId, attemptId: a.id, evidencePath: join(p.contract.config.artifactRoot, p.runId, a.id, "verification", "evidence.json") });
+          }
+          if (p.verification.kind !== "intent") throw new DurableError("corrupt_store", "Missing verification intent");
+          const operation = p.verification;
+          let evidence;
+          if (await exists(operation.evidencePath)) {
+            try { evidence = await validateManifest(p, operation.evidencePath); }
+            catch (error) { throw new DurableError("artifact_invalid", String(error)); }
+          } else {
+            evidence = await verify(p, faults);
+            await faults.at("verification.after_evidence_artifact", p.runId);
+          }
+          await append({ type: "VerificationCompleted", operationId: operation.operationId, ...verificationFacts(evidence), evidence: await artifact(operation.evidencePath) });
+        }
+        if (!p.contract.config.repair || status() !== "REPAIR_READY") break;
       }
     }
     const result = store.read(); return { kind: "durable_result", projection: result.projection!, events: result.events };
