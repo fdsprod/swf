@@ -1,4 +1,4 @@
-// External Codex configuration probe. Three small live calls, outside acceptance.
+// External Codex configuration probe. Five small live calls, outside acceptance.
 // Retain as documentation. No user config, persisted trust, or real MCP changes.
 import { spawn, spawnSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
@@ -35,7 +35,10 @@ setTimeout(() => process.exit(0), 60000);
 const version = spawnSync(codex, ['--version'], { encoding: 'utf8', windowsHide: true }).stdout.trim();
 const results = [];
 console.log(JSON.stringify({ root, codex, version, node: process.version }));
-for (const mode of ['project_only', 'cli_enabled', 'cli_disabled']) {
+const cases = ['project_only', 'cli_enabled', 'cli_disabled', 'cli_empty_table', 'cli_apps_disabled'];
+const modes = process.env.P1_CONFIG_CASE ? [process.env.P1_CONFIG_CASE] : cases;
+if (modes.some(mode => !cases.includes(mode))) throw new Error('Unknown P1_CONFIG_CASE');
+for (const mode of modes) {
   const artifacts = join(root, mode);
   mkdirSync(artifacts);
   const sentinel = join(artifacts, 'mcp-started.json');
@@ -51,7 +54,9 @@ for (const mode of ['project_only', 'cli_enabled', 'cli_disabled']) {
   // It is a positive control, not a project trust override or sandbox fallback.
   if (mode !== 'project_only') args.push('-c', `mcp_servers.p1_probe.command=${JSON.stringify(command)}`,
     '-c', `mcp_servers.p1_probe.args=${JSON.stringify(serverArgs)}`,
-    '-c', `mcp_servers.p1_probe.enabled=${mode === 'cli_enabled'}`);
+    '-c', `mcp_servers.p1_probe.enabled=${mode !== 'cli_disabled'}`);
+  if (mode === 'cli_empty_table') args.push('-c', 'mcp_servers={}');
+  if (mode === 'cli_apps_disabled') args.push('-c', 'features.apps=false');
   args.push('--ephemeral', '--cd', repo, '--json', '--color', 'never', '--output-last-message', join(artifacts, 'final.txt'), '-');
   const child = spawn(codex, args, { cwd: repo, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] });
   let stdout = '', stderr = '', timedOut = false;
@@ -78,6 +83,8 @@ for (const mode of ['project_only', 'cli_enabled', 'cli_disabled']) {
 }
 writeFileSync(join(root, 'result.json'), JSON.stringify({ root, codex, version, node: process.version, results }, null, 2));
 // No absence-only conclusion: the explicit positive control must start the server.
-process.exitCode = results.every(result => result.code === 0 && !result.timedOut) &&
-  results[1].serverStarted && !results[2].serverStarted ? 0 : 1;
+process.exitCode = results.every(result => result.code === 0 && !result.timedOut &&
+  (result.mode !== 'cli_enabled' || result.serverStarted) &&
+  (result.mode !== 'cli_disabled' || !result.serverStarted)) ? 0 : 1;
+// A selected supplemental case relies on the retained full-run positive control.
 // Preserve this exact disposable root and evidence for review. Never delete by glob.

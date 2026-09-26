@@ -130,12 +130,18 @@ The supported per-server override tested here is:
 -c mcp_servers.p1_probe.enabled=false
 ```
 
-This disables the named server. It does not establish a wildcard policy for unknown MCP servers or plugins. No empty-table merge assumption was tested or adopted.
+This disables the named server. It does not establish a wildcard policy for unknown MCP servers or plugins.
+
+Two additional single-case probes checked related settings. A later `-c mcp_servers={}` prevented startup after the same server command, arguments, and `enabled=true` had been specified through earlier CLI overrides. This establishes replacement within that tested CLI override sequence. It does not establish merge behavior against a loaded trusted-project or managed/system table, because the project-only case did not load its server.
+
+Installed `features list` recognized `apps` as stable and showed it disabled under `-c features.apps=false`. A live call with that setting and the explicitly enabled dummy still started the server. Disabling apps therefore does not disable this configured MCP server. Both supplemental calls exited 0 with final answer `OK`.
 
 Project-only startup was absent in this fresh repository. This is consistent with the documented requirement for project trust. It does not prove that `--ignore-user-config` suppresses project settings in every trusted repository. P1 must fail closed when its selected configuration cannot exclude inherited host authority. Do not force project trust to make an execution work.
 
 The probe retained the rules flag default, but did not prove project-local rules were loaded. Official documentation says untrusted project layers include config, hooks, and rules. That distinction matters when defining the final launch policy. See [project configuration and trust](https://learn.chatgpt.com/docs/config-file/config-advanced) and the documented per-server `enabled` setting in [MCP configuration](https://learn.chatgpt.com/docs/extend/mcp).
 
-Evidence is retained at `C:/Users/fdspr/AppData/Local/Temp/swf-p1-config-WKxkjr`. Its root `result.json` records executable version, arguments, exits, and observations. Each case has stdout JSONL, stderr, final output, and a result file. The positive-control server PID was no longer running after the probe.
+Evidence is retained at `C:/Users/fdspr/AppData/Local/Temp/swf-p1-config-WKxkjr`. Its root `result.json` records executable version, arguments, exits, and observations. Each case has stdout JSONL, stderr, final output, and a result file. The positive-control server PID was no longer running after the probe. Supplemental roots under the same temp directory are `swf-p1-config-NkoIyf` for the empty-table case and `swf-p1-config-GLnzFc` for the apps-disabled case.
 
-Reproduce with `node tests/learning/p1/config-probe.mjs`. It creates a fresh disposable repository and makes three small model calls. Keep this probe as research documentation, outside the acceptance suite. It does not establish P1 product acceptance.
+Reproduce with `node tests/learning/p1/config-probe.mjs`. It creates a fresh disposable repository and now makes five small model calls. Set `P1_CONFIG_CASE` to `cli_empty_table` or `cli_apps_disabled` to repeat one supplemental case; an absence-only observation still needs the retained positive control. Keep this probe as research documentation, outside the acceptance suite. It does not establish P1 product acceptance.
+
+The selected P1 launch policy should combine `--ignore-user-config`, an explicit empty MCP table, and rejection of project or ancestor config before launch. This is a fail-closed policy for the approved local deployment. It is not a universal claim about managed/system configuration or plugin-supplied authority.
