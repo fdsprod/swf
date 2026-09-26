@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {hash,validateResult,validateContext,schema} from './support.mjs';
-import {assertSnapshot,assertArtifacts} from './replay.mjs';
+import {assertSnapshot,assertArtifacts,assertHistoricalDecisionArtifacts} from './replay.mjs';
 
 if(!process.env.P3_LIVE_PROOF) {
   process.stderr.write('BLOCKED P3-LIVE: selected real GitHub issue, actual authorized human answer, fresh-process continuation, and publication-crash proof are required. Set P3_LIVE_PROOF to their reviewed evidence manifest.\n');
@@ -22,6 +22,7 @@ schema(validateResult,waiting);schema(validateResult,done);
 assert.equal(waiting.kind,'durable_result');assert.equal(done.kind,'durable_result');
 assert.equal(waiting.projection.state.status,'WAITING_FOR_DECISION');assert.equal(done.projection.state.status,'VERIFIED');
 assertSnapshot(waiting);assertSnapshot(done);assertArtifacts(waiting.projection);assertArtifacts(done.projection);
+assertHistoricalDecisionArtifacts(waiting.events);assertHistoricalDecisionArtifacts(done.events);
 assert.equal(waiting.projection.runId,done.projection.runId);assert.equal(done.projection.attempts.length,waiting.projection.attempts.length+1);
 const d=done.projection.decisions.at(-1);assert.equal(d.kind,'resolved');
 const expectedId=done.projection.contract.config.decisions.authorizedResolver.id;

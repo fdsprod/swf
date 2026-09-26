@@ -132,6 +132,12 @@ export function assertSnapshot(snapshot) {
   assert.deepEqual(snapshot.projection, replay(snapshot.events), 'Projection must equal independent fact replay');
   return snapshot.projection;
 }
+export function assertHistoricalDecisionArtifacts(events) {
+  for(const {fact}of events)if(fact.type==='DecisionConflictObserved'){
+    const captured=JSON.parse(artifact(fact.conflict.record));assert.ok(Array.isArray(captured));
+    const comments=captured.flat();for(const identity of fact.conflict.comments){const actual=comments.find(c=>c.id===identity.id);assert.ok(actual);assert.equal(actual.user.id,identity.author.id);assert.equal(actual.html_url,identity.url);assert.equal(actual.created_at,identity.createdAt);assert.equal(actual.updated_at,identity.updatedAt);}
+  }
+}
 export function artifact(ref) {
   const bytes = readFileSync(ref.path); assert.equal(hash(bytes), ref.digest, `Artifact digest: ${ref.path}`); return bytes;
 }
@@ -171,6 +177,7 @@ export function assertDurable(observed, f, expectedStatus, kind = 'durable_resul
   assert.equal(observed.result.kind, kind);
   const snapshot = { events: observed.result.events, projection: observed.result.projection };
   const p = assertSnapshot(snapshot);
+  assertHistoricalDecisionArtifacts(snapshot.events);
   assert.equal(p.state.status, expectedStatus);
   assert.equal(observed.code, kind === 'durable_status' || ['VERIFIED','WAITING_FOR_DECISION'].includes(expectedStatus) ? 0 : 1);
   assert.deepEqual(readStore(f), snapshot, 'CLI result must reflect durable SQLite state');

@@ -8,12 +8,14 @@ const data = JSON.parse(fs.readFileSync(file, 'utf8'));
 const value = names => { const i = args.findIndex(a => names.includes(a)); return i < 0 ? undefined : args[i + 1]; };
 const method = value(['--method', '-X']) || 'GET';
 const endpoint = args.find(a => a === 'user' || a.startsWith('repos/'));
+const hostname = value(['--hostname']);
 let facts = [];
 try { const db = new DatabaseSync(path.join(root, 'store/run.sqlite'), {readOnly:true}); facts = db.prepare('SELECT json FROM events ORDER BY sequence').all().map(r => JSON.parse(r.json).fact); db.close(); } catch {}
-data.calls.push({args, method, endpoint, facts});
+data.calls.push({args, method, endpoint, hostname, inheritedHost:process.env.GH_HOST, facts});
 const save = () => fs.writeFileSync(file, JSON.stringify(data));
 const fail = (message, code = 1) => { save(); process.stderr.write(message); process.stdout.write(JSON.stringify({message,status:'503'})); process.exit(code); };
 if (args[0] !== 'api') fail('Only structured gh api is supported');
+if (hostname !== 'github.com') fail('Every API call must pin the github.com identity realm');
 if (data.mode === 'api-failure') fail('Injected gateway failure');
 if (data.mode === 'malformed') { save(); process.stdout.write('{bad-json'); process.exit(0); }
 let result;

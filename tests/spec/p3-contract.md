@@ -42,6 +42,10 @@ Repeat unresolved polls append no facts. Repeat unchanged conflicts append no du
 
 ## GitHub adapter and uncertain effects
 
+Every `gh api` call, including publisher lookup at `/user`, must pass `--hostname github.com`. The inherited `GH_HOST` cannot select another identity realm for the pinned numeric publisher or resolver. Pin the bytes of `decisions.executable` in the run contract's immutable `programs`, even when it differs from every worker and verifier executable. A changed gateway executable is `artifact_invalid` before further gateway or worker execution.
+
+Validate every historical `DecisionConflictObserved.conflict.record` on resume, including records no longer present on the resolved projection. Resolution removes the current conflict state, not the integrity obligation for durable history. Missing or altered historical captures are `artifact_invalid` and cannot trigger polling or another worker.
+
 Call the trusted executable with argv arrays, without a shell. Use `gh api`, explicit GET/POST methods, bounded process execution, and JSON POST bodies through `--input -`. GET comments with `--paginate --slurp`, then flatten all page arrays. Validate successful process termination and API shapes before using payloads. Failed calls and malformed JSON are errors, not empty successful reads. Do not use names embedded in comment text as identity.
 
 Authenticate the publisher with `GET /user`, and pin the returned numeric ID before publication. The question body has a deterministic marker containing both run and decision IDs. It includes the exact question/reason, option IDs/descriptions/consequences, impact, reversibility, resolver label, and exact response instructions. Persist the body and publication plan before any POST. Persist `DecisionPublicationStarted` immediately before dispatch.

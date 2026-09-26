@@ -13,11 +13,12 @@ export const validateAnswer=ajv.compile(JSON.parse(readFileSync(join(trustedRoot
 export const validateContext=ajv.compile(JSON.parse(readFileSync(join(trustedRoot,'src/contracts/schemas/decision-worker-input.schema.json'),'utf8')));
 export function fixture({worker='decision'}={}) {
   const f=p2Fixture();
+  copyFileSync(process.execPath,join(f.root,'gateway-node.exe'));
   for(const name of ['codex-double.cjs','github-double.cjs']) copyFileSync(join(trustedRoot,'tests/spec/p3/fixtures',name),join(f.trusted,`p3-${name}`));
   f.config.request.source={provider:'github',externalId:'7',url:'https://github.com/factory-fixture/decisions/issues/7'};
   f.config.request.repository.url='https://github.com/factory-fixture/decisions.git';
   f.config.worker.prefixArgs=[join(f.trusted,'p3-codex-double.cjs'),worker];
-  f.config.decisions={kind:'github_issue_comments',executable:join(f.root,'node.exe'),prefixArgs:[join(f.trusted,'p3-github-double.cjs'),f.root],timeoutSeconds:10,authorizedResolver:resolver};
+  f.config.decisions={kind:'github_issue_comments',executable:join(f.root,'gateway-node.exe'),prefixArgs:[join(f.trusted,'p3-github-double.cjs'),f.root],timeoutSeconds:10,authorizedResolver:resolver};
   f.gatewayPath=join(f.root,'github.json');
   writeFileSync(f.gatewayPath,JSON.stringify({publisher,comments:[],calls:[],nextId:1000,mode:'normal'}));
   writeFileSync(f.configPath,JSON.stringify(f.config));

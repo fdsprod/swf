@@ -1,8 +1,31 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {appendFileSync} from 'node:fs';
-import {withFixture,run,resume,status,fault,killFactory,runArgs,resumeArgs,readStore,gateway,updateGateway,posts,addAnswer,contexts,assertError} from '../harness/support.mjs';
-import {assertDurable,assertSnapshot,assertArtifacts} from '../harness/replay.mjs';
+import {appendFileSync,readFileSync} from 'node:fs';
+import {withFixture,run,resume,status,fault,killFactory,runArgs,resumeArgs,readStore,gateway,updateGateway,posts,addAnswer,contexts,assertError,cli,hash} from '../harness/support.mjs';
+import {assertDurable,assertSnapshot,assertArtifacts,assertHistoricalDecisionArtifacts} from '../harness/replay.mjs';
+
+test('P3-003/007: hostile GH_HOST cannot change publisher or resolver identity realm',()=>withFixture(f=>{
+  const env={GH_HOST:'hostile.example.invalid'};
+  const p=assertDurable(cli(runArgs(f),{env}),f,'WAITING_FOR_DECISION');addAnswer(f,p.state.decision.id);
+  assertDurable(cli(resumeArgs(f),{env}),f,'VERIFIED');
+  const calls=gateway(f).calls;assert.ok(calls.some(c=>c.endpoint==='user'));assert.ok(calls.some(c=>c.method==='POST'));
+  for(const call of calls){assert.equal(call.hostname,'github.com');assert.equal(call.args[call.args.indexOf('--hostname')+1],'github.com');}
+}));
+
+test('P3-006/009: distinct decision executable bytes are pinned and mutation blocks resume',()=>withFixture(f=>{
+  const p=assertDurable(run(f),f,'WAITING_FOR_DECISION');assert.notEqual(f.config.decisions.executable,f.config.worker.executable);
+  assert.ok(p.contract.programs.some(a=>a.path===f.config.decisions.executable&&a.digest===hash(readFileSync(a.path))),'Decision executable must be a pinned immutable program');
+  const before=readStore(f),calls=gateway(f).calls.length;appendFileSync(f.config.decisions.executable,'changed executable bytes');
+  assertError(resume(f),'artifact_invalid');assert.deepEqual(readStore(f),before);assert.equal(gateway(f).calls.length,calls);assert.equal(contexts(f).length,1);
+}));
+
+test('P3-004/006: resolved decision still validates historical conflict capture',()=>withFixture(f=>{
+  const p=assertDurable(run(f),f,'WAITING_FOR_DECISION'),id=p.state.decision.id;addAnswer(f,id);const contradictory=addAnswer(f,id,{answer:'Use zero.',selectedOptionId:'zero'});
+  assertError(resume(f),'decision_conflict');const conflict=readStore(f).events.find(e=>e.fact.type==='DecisionConflictObserved').fact.conflict;
+  updateGateway(f,g=>{g.comments=g.comments.filter(c=>c.id!==contradictory.id);});const done=assertDurable(resume(f),f,'VERIFIED');assert.equal(done.decisions[0].kind,'resolved');assert.equal(Object.hasOwn(done.decisions[0],'conflict'),false);
+  const before=readStore(f),calls=gateway(f).calls.length;assertHistoricalDecisionArtifacts(before.events);appendFileSync(conflict.record.path,'tampered history');
+  assert.throws(()=>assertHistoricalDecisionArtifacts(before.events),assert.AssertionError);assertError(resume(f),'artifact_invalid');assert.deepEqual(readStore(f),before);assert.equal(gateway(f).calls.length,calls);assert.equal(contexts(f).length,2);
+}));
 
 for(const point of ['transaction.after_event_insert','transaction.after_projection_write']) {
   test(`P3-006: ${point} rolls decision publication intent back atomically`,async()=>withFixture(async f=>{
