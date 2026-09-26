@@ -44,7 +44,7 @@ if (!differences.length) {
   }
   execute('p4-sanity', ['--test', '--test-reporter=tap', join(trustedRoot, 'tests/spec/p4/harness/sanity.test.mjs')], { tests: true });
   execute('p4-acceptance', ['--test', '--test-reporter=tap', '--test-concurrency=1',
-    ...['repair', 'recovery'].map(name => join(trustedRoot, `tests/spec/p4/scenarios/${name}.test.mjs`))], { timeout: 900000, tests: true });
+    ...['repair', 'recovery', 'reservation-integrity'].map(name => join(trustedRoot, `tests/spec/p4/scenarios/${name}.test.mjs`))], { timeout: 900000, tests: true });
   if(preparation) results.push({name:'accepted-baseline-integration',exitCode:1,classification:'blocked',reason:'Preparation is not acceptance. Requires accepted P3 integration and definitive committed red.'});
 }
 function changes(root) {
