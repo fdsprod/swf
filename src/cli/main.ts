@@ -5,12 +5,15 @@ import { run } from "../kernel/index.js";
 import { scriptedVerifier, scriptedWorker } from "../adapters/scripted.js";
 import type { LocalCliResult } from "../contracts/local.js";
 import { runLocal, checkEvidence } from "./local.js";
+import type { DurableCliResult } from "../contracts/durable.js";
+import { durableCommand } from "./durable.js";
 
 function inputError(issues: string[]): CliResult {
   return { kind: "input_error", issues, events: [] };
 }
 
-async function main(args: string[]): Promise<CliResult | LocalCliResult> {
+async function main(args: string[]): Promise<CliResult | LocalCliResult | DurableCliResult> {
+  if (args.includes("--store") || args[0] === "resume" || args[0] === "status") return durableCommand(args);
   if (args.length === 4 && args[2] && args[3] === "--json") {
     if (args[0] === "run" && args[1] === "--local") return runLocal(args[2]);
     if (args[0] === "check" && args[1] === "--evidence") return checkEvidence(args[2]);
@@ -32,4 +35,4 @@ async function main(args: string[]): Promise<CliResult | LocalCliResult> {
 
 const result = await main(process.argv.slice(2));
 process.stdout.write(`${JSON.stringify(result)}\n`);
-process.exitCode = result.kind === "not_implemented" ? 3 : result.kind === "evidence_check" ? (result.status === "current" ? 0 : 1) : result.kind === "run_result" || result.kind === "local_run_result" ? (result.state.status === "VERIFIED" ? 0 : 1) : 2;
+process.exitCode = result.kind === "not_implemented" ? 3 : result.kind === "durable_status" ? 0 : result.kind === "durable_result" ? (result.projection.state.status === "VERIFIED" ? 0 : 1) : result.kind === "durable_error" ? (result.code === "input_error" ? 2 : 1) : result.kind === "evidence_check" ? (result.status === "current" ? 0 : 1) : result.kind === "run_result" || result.kind === "local_run_result" ? (result.state.status === "VERIFIED" ? 0 : 1) : 2;
