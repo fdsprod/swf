@@ -6,14 +6,16 @@ import { scriptedVerifier, scriptedWorker } from "../adapters/scripted.js";
 import type { LocalCliResult } from "../contracts/local.js";
 import { runLocal, checkEvidence } from "./local.js";
 import type { DurableCliResult } from "../contracts/durable.js";
-import { durableCommand } from "./durable.js";
 
 function inputError(issues: string[]): CliResult {
   return { kind: "input_error", issues, events: [] };
 }
 
 async function main(args: string[]): Promise<CliResult | LocalCliResult | DurableCliResult> {
-  if (args.includes("--store") || args[0] === "resume" || args[0] === "status") return durableCommand(args);
+  if (args.includes("--store") || args[0] === "resume" || args[0] === "status") {
+    const { durableCommand } = await import("./durable.js");
+    return durableCommand(args);
+  }
   if (args.length === 4 && args[2] && args[3] === "--json") {
     if (args[0] === "run" && args[1] === "--local") return runLocal(args[2]);
     if (args[0] === "check" && args[1] === "--evidence") return checkEvidence(args[2]);

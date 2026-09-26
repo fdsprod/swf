@@ -7,7 +7,7 @@ import type { Artifact, LocalCliResult, LocalEvidence, ProcessRecord } from "../
 import { run } from "../kernel/run.js";
 import { readConfig } from "../adapters/local-config.js";
 import { artifact, canonical, captureDiff, changes, contractDigest, git, programs, save, snapshot } from "../adapters/local-files.js";
-import { executeRestricted, outcome, workerArgs } from "../adapters/local-execution.js";
+import { commandResult, executeRestricted, outcome, workerArgs } from "../adapters/local-execution.js";
 import fixtureSchema from "../contracts/schemas/run-fixture.schema.json" with { type: "json" };
 import resultSchema from "../contracts/schemas/cli-result.schema.json" with { type: "json" };
 import localConfigSchema from "../contracts/schemas/local-config.schema.json" with { type: "json" };
@@ -63,14 +63,13 @@ export async function runLocal(path: string, signal?: AbortSignal): Promise<Loca
           record = { executable: binding.executable, args: binding.args, cwd: workspace.path, termination: { kind: "launch_error", reason: String(error) }, stdout: empty, stderr: empty };
         }
         commands.push({ specId: spec.id, process: record });
-        let status: VerificationResult["status"] = record.termination.kind !== "exited" ? "error" : record.termination.exitCode === 0 ? "passed" : "failed";
-        let summary = JSON.stringify(record.termination);
+        let result = commandResult(attemptId, spec.id, record);
         try {
           if ((await snapshot(workspace.path)).digest !== candidate.digest) throw new Error("Candidate changed during verification");
           if (contractDigest(config, await programs(config)) !== contractDigest(config, pinned)) throw new Error("Verification inputs changed during verification");
           if (signal?.aborted) throw new Error("Run cancelled");
-        } catch (error) { status = "error"; summary = String(error); }
-        results.push({ specId: spec.id, status, summary, evidence: [{ id: `${attemptId}:${spec.id}`, kind: "command_output", uri: record.stdout.path, digest: record.stdout.digest }] });
+        } catch (error) { result = { ...result, status: "error", summary: String(error) }; }
+        results.push(result);
       }
       // Required evidence must exist before the kernel can accept passed checks.
       const captured = await captureDiff(workspace.path, baseCommit, join(directory, "diff.json"), before, candidate, changedPaths);

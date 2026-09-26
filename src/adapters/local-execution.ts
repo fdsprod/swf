@@ -1,8 +1,18 @@
 import { readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import type { AgentOutcome } from "../contracts/index.js";
+import type { AgentOutcome, VerificationResult } from "../contracts/index.js";
 import type { LocalConfig, ProcessRecord } from "../contracts/local.js";
+import type { ProcessIdentity } from "../contracts/durable.js";
 import { processInJob } from "./windows-job.js";
+
+export function commandResult(attemptId: string, specId: string, process: ProcessRecord): VerificationResult {
+  return {
+    specId,
+    status: process.termination.kind !== "exited" ? "error" : process.termination.exitCode === 0 ? "passed" : "failed",
+    summary: JSON.stringify(process.termination),
+    evidence: [{ id: `${attemptId}:${specId}`, kind: "command_output", uri: process.stdout.path, digest: process.stdout.digest }],
+  };
+}
 
 export function permissions(config: LocalConfig, workspace: string, commonGit: string): string {
   const rules: Record<string, string> = { ":root": "read", ":workspace_roots": "write" };
@@ -11,9 +21,9 @@ export function permissions(config: LocalConfig, workspace: string, commonGit: s
   for (const path of config.blockedReadPaths) rules[resolve(path).replaceAll("\\", "/")] = "deny";
   return `permissions.factory.filesystem={${Object.entries(rules).map(([key, value]) => `${JSON.stringify(key)}=${JSON.stringify(value)}`).join(",")}}`;
 }
-export async function executeRestricted(config: LocalConfig, workspace: string, commonGit: string, directory: string, name: string, executable: string, args: string[], timeoutSeconds: number, signal?: AbortSignal, input?: string, nativeHost = false, cwd = workspace): Promise<ProcessRecord> {
+export async function executeRestricted(config: LocalConfig, workspace: string, commonGit: string, directory: string, name: string, executable: string, args: string[], timeoutSeconds: number, signal?: AbortSignal, input?: string, nativeHost = false, cwd = workspace, onStarted?: (identity: ProcessIdentity) => Promise<void>): Promise<ProcessRecord> {
   const launchArgs = nativeHost ? args : ["sandbox", "-P", "factory", "-c", permissions(config, workspace, commonGit), "-c", "permissions.factory.network.enabled=false", "-C", cwd, "--", executable, ...args];
-  const result = await processInJob({ executable: nativeHost ? executable : config.sandboxExecutable, args: launchArgs, cwd, directory, name, timeoutSeconds, ...(signal ? { signal } : {}), ...(input !== undefined ? { input } : {}) });
+  const result = await processInJob({ executable: nativeHost ? executable : config.sandboxExecutable, args: launchArgs, cwd, directory, name, timeoutSeconds, ...(signal ? { signal } : {}), ...(input !== undefined ? { input } : {}), ...(onStarted ? { onStarted } : {}) });
   return { ...result, executable, args };
 }
 export function workerArgs(config: LocalConfig, workspace: string, commonGit: string, schema: string): string[] {

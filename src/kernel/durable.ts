@@ -1,0 +1,79 @@
+import type { DurableEvent, DurableProjection, DurableFact, DurableAttempt } from "../contracts/durable.js";
+import type { UnitExecutionState, VerificationResult, WorkUnit } from "../contracts/index.js";
+
+export function stable(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(stable).join(",")}]`;
+  if (value !== null && typeof value === "object") return `{${Object.keys(value).sort().map(key => `${JSON.stringify(key)}:${stable((value as Record<string, unknown>)[key])}`).join(",")}}`;
+  return JSON.stringify(value);
+}
+function requireFact(condition: unknown, message: string): asserts condition { if (!condition) throw new Error(message); }
+export function durableVerdict(unit: WorkUnit, results: VerificationResult[], issues: string[]): UnitExecutionState {
+  const fail = (reason: string): UnitExecutionState => ({ status: "FAILED", unit, reason });
+  if (issues.length) return fail(issues.join("; "));
+  const ids = results.map(r => r.specId), required = unit.verification.required.map(s => s.id);
+  if (ids.length !== required.length || new Set(ids).size !== ids.length || required.some(id => !ids.includes(id))) return fail("Invalid verification result coverage");
+  if (results.some(r => r.status === "error")) return fail(results.filter(r => r.status === "error").map(r => r.summary).join("; "));
+  if (results.some(r => r.status === "passed" && !r.evidence.length)) return fail("Missing verification evidence");
+  return { status: results.some(r => r.status === "failed") ? "REPAIR_READY" : "VERIFIED", unit, results };
+}
+export function replay(events: DurableEvent[]): DurableProjection {
+  let p: DurableProjection | undefined;
+  const operations = new Set<string>();
+  const operation = (id: string): void => { requireFact(!operations.has(id), "Duplicate operation identity"); operations.add(id); };
+  for (const [index, event] of events.entries()) {
+    requireFact(event.sequence === index + 1, "Noncontiguous event sequence");
+    const fact: DurableFact = structuredClone(event.fact);
+    if (!p) {
+      requireFact(fact.type === "RunCreated", "History must start with RunCreated");
+      const request = fact.contract.config.request;
+      const unit: WorkUnit = { id: `${request.id}:unit:1`, objective: request.objective, constraints: request.constraints, verification: fact.contract.config.verification, metadata: request.metadata };
+      const graph = { id: `${request.id}:graph`, requestId: request.id, units: [unit], dependencies: [] };
+      requireFact(event.runId !== request.id && stable(fact.graph) === stable(graph), "Invalid run graph");
+      p = { schemaVersion: 1, runId: event.runId, sequence: event.sequence, contract: fact.contract, graph, baseCommit: fact.baseCommit, maxStarts: fact.maxStarts, state: { status: "PENDING", unit }, workspace: { kind: "unplanned" }, attempts: [], verification: { kind: "idle" } };
+      continue;
+    }
+    requireFact(event.runId === p.runId, "Run identity changed"); p.sequence = event.sequence;
+    const unit = p.graph.units[0]!;
+    const selected = (id: string): DurableAttempt => { const a = p!.attempts.at(-1); requireFact(a?.id === id, "Attempt identity mismatch"); return a; };
+    const identity = (a: DurableAttempt) => ({ id: a.id, ordinal: a.ordinal, completionPath: a.completionPath });
+    const replace = (a: DurableAttempt): void => { p!.attempts[p!.attempts.length - 1] = a; };
+    switch (fact.type) {
+      case "WorkspacePlanned":
+        requireFact(p.workspace.kind === "unplanned" && p.state.status === "PENDING", "Workspace already planned"); operation(fact.operationId);
+        requireFact(fact.workspace.baseCommit === p.baseCommit, "Workspace base mismatch"); p.workspace = { kind: "intent", operationId: fact.operationId, workspace: fact.workspace }; break;
+      case "WorkspaceReady":
+        requireFact(p.workspace.kind === "intent" && p.workspace.operationId === fact.operationId, "Unknown workspace intent");
+        p.workspace = { ...p.workspace, kind: "ready" }; p.state = { status: "READY", unit }; break;
+      case "AttemptReserved":
+        requireFact(p.workspace.kind === "ready" && p.state.status === "READY" && p.attempts.length < p.maxStarts, "Worker reservation not allowed");
+        requireFact(fact.attempt.ordinal === p.attempts.length + 1 && !p.attempts.some(a => a.id === fact.attempt.id || a.completionPath === fact.attempt.completionPath), "Invalid attempt identity");
+        p.attempts.push({ ...fact.attempt, kind: "reserved" }); p.state = { status: "RUNNING", unit }; break;
+      case "WorkerStarted": {
+        const a = selected(fact.attemptId); requireFact(a.kind === "reserved" && p.state.status === "RUNNING", "Worker start without reservation");
+        replace({ ...identity(a), kind: "running", process: fact.process }); break;
+      }
+      case "AttemptInterrupted": {
+        const a = selected(fact.attemptId); requireFact((a.kind === "reserved" || a.kind === "running") && p.state.status === "RUNNING", "Attempt cannot be interrupted");
+        replace({ ...identity(a), kind: "interrupted", reason: fact.reason, artifacts: fact.artifacts }); p.state = { status: "READY", unit }; break;
+      }
+      case "WorkerCompleted": {
+        const a = selected(fact.attemptId); requireFact((a.kind === "reserved" || a.kind === "running") && p.state.status === "RUNNING" && a.completionPath === fact.record.path, "Completion without current attempt");
+        requireFact(fact.outcome.kind !== "decision_required", "Decision continuation is unavailable");
+        replace({ ...identity(a), kind: "completed", outcome: fact.outcome, record: fact.record });
+        p.state = fact.outcome.kind === "completed" ? { status: "VERIFYING", unit } : { status: "FAILED", unit, reason: fact.outcome.reason }; break;
+      }
+      case "VerificationPlanned": {
+        const a = selected(fact.attemptId); requireFact(a.kind === "completed" && a.outcome.kind === "completed" && p.state.status === "VERIFYING" && p.verification.kind === "idle", "Verification without completed worker"); operation(fact.operationId);
+        p.verification = { kind: "intent", operationId: fact.operationId, attemptId: fact.attemptId, evidencePath: fact.evidencePath }; break;
+      }
+      case "VerificationCompleted":
+        requireFact(p.verification.kind === "intent" && p.verification.operationId === fact.operationId && p.verification.evidencePath === fact.evidence.path && p.state.status === "VERIFYING", "Verification completion without intent");
+        p.verification = { ...p.verification, kind: "completed", evidence: fact.evidence }; p.state = durableVerdict(unit, fact.results, fact.issues); break;
+      case "RunStopped":
+        if (fact.reason === "worker_start_budget_exhausted") requireFact(p.state.status === "READY" && p.attempts.length === p.maxStarts, "Budget exhaustion disagrees with attempts");
+        p.state = { status: "FAILED", unit, reason: fact.message }; break;
+      default: throw new Error("Unexpected durable event");
+    }
+  }
+  requireFact(p, "Empty run history"); return p;
+}
