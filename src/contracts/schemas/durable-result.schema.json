@@ -706,7 +706,8 @@
             "reason": {
               "enum": [
                 "worker_start_budget_exhausted",
-                "recovery_failed"
+                "recovery_failed",
+                "repair_budget_exhausted"
               ]
             },
             "message": {
@@ -829,6 +830,36 @@
               "$ref": "#/definitions/decisionReceipt"
             }
           }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "repairId",
+            "failedVerificationId",
+            "evidence",
+            "attempt"
+          ],
+          "properties": {
+            "type": {
+              "const": "RepairReserved"
+            },
+            "repairId": {
+              "type": "string",
+              "pattern": "\\S"
+            },
+            "failedVerificationId": {
+              "type": "string",
+              "pattern": "\\S"
+            },
+            "evidence": {
+              "$ref": "#/definitions/artifact"
+            },
+            "attempt": {
+              "$ref": "#/definitions/attemptIdentity"
+            }
+          }
         }
       ]
     },
@@ -917,6 +948,12 @@
           "minItems": 0,
           "items": {
             "$ref": "#/definitions/decisionRecord"
+          }
+        },
+        "repairs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/repairReservation"
           }
         }
       }
@@ -1245,6 +1282,32 @@
           }
         }
       ]
+    },
+    "repairReservation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repairId",
+        "failedVerificationId",
+        "evidence",
+        "attempt"
+      ],
+      "properties": {
+        "repairId": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "failedVerificationId": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "evidence": {
+          "$ref": "#/definitions/artifact"
+        },
+        "attempt": {
+          "$ref": "#/definitions/attemptIdentity"
+        }
+      }
     }
   }
 }
