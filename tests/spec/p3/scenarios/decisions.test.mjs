@@ -84,6 +84,15 @@ test('P3-008: polling consumes no starts and valid answer cannot exceed original
   assert.deepEqual(assertDurable(resume(f),f,'FAILED'),stopped);
 }));
 
+test('P3-004: conflict JSON property order cannot append duplicate observations',()=>withFixture(f=>{
+  const p=waiting(f),id=p.state.decision.id;addAnswer(f,id);addAnswer(f,id,{answer:'Use zero.',selectedOptionId:'zero'});
+  assertError(resume(f),'decision_conflict');const before=readStore(f),comments=gateway(f).comments;
+  assert.equal(before.events.filter(e=>e.fact.type==='DecisionConflictObserved').length,1);
+  const reorder=value=>Array.isArray(value)?value.map(reorder):value!==null&&typeof value==='object'?Object.fromEntries(Object.entries(value).reverse().map(([key,child])=>[key,reorder(child)])):value;
+  updateGateway(f,data=>{data.comments=reorder(data.comments);});assert.deepEqual(gateway(f).comments,comments);assert.notEqual(JSON.stringify(gateway(f).comments),JSON.stringify(comments));
+  assertError(resume(f),'decision_conflict');assert.deepEqual(readStore(f),before,'Unchanged comment values cannot create another conflict observation');assert.equal(contexts(f).length,1);assert.equal(posts(f).length,1);
+}));
+
 test('P3-008: sequential decisions have distinct IDs, retained answers and bounded fresh starts',()=>withFixture({worker:'ask-again'},f=>{
   let p=waiting(f,run(f,2)); const first=p.state.decision.id; addAnswer(f,first);
   p=assertDurable(resume(f),f,'WAITING_FOR_DECISION'); assert.equal(p.attempts.length,2); assert.equal(p.decisions.length,2);
