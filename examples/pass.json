@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "request": {
+    "id": "example", "source": { "provider": "fixture", "externalId": "example" },
+    "repository": { "url": "fixture://offline", "baseRef": "main" },
+    "objective": "Prove that verification controls completion",
+    "constraints": [], "acceptanceCriteria": [], "metadata": {}
+  },
+  "verification": {
+    "required": [{ "kind": "command", "id": "behavior", "command": "scripted-behavior-check" }],
+    "completionPolicy": { "requireAll": true }
+  },
+  "script": {
+    "agentOutcome": { "kind": "completed", "summary": "The worker claims completion", "evidence": [] },
+    "verificationResults": [{
+      "specId": "behavior", "status": "passed", "summary": "The independent scripted check passed",
+      "evidence": [{ "id": "behavior-result", "kind": "test_result", "uri": "memory:behavior-result" }]
+    }]
+  }
+}
