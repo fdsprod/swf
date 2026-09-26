@@ -37,4 +37,4 @@ async function main(args: string[]): Promise<CliResult | LocalCliResult | Durabl
 
 const result = await main(process.argv.slice(2));
 process.stdout.write(`${JSON.stringify(result)}\n`);
-process.exitCode = result.kind === "not_implemented" ? 3 : result.kind === "durable_status" ? 0 : result.kind === "durable_result" ? (result.projection.state.status === "VERIFIED" ? 0 : 1) : result.kind === "durable_error" ? (result.code === "input_error" ? 2 : 1) : result.kind === "evidence_check" ? (result.status === "current" ? 0 : 1) : result.kind === "run_result" || result.kind === "local_run_result" ? (result.state.status === "VERIFIED" ? 0 : 1) : 2;
+process.exitCode = result.kind === "not_implemented" ? 3 : result.kind === "durable_status" ? 0 : result.kind === "durable_result" ? (["VERIFIED", "WAITING_FOR_DECISION"].includes(result.projection.state.status) ? 0 : 1) : result.kind === "durable_error" ? (result.code === "input_error" ? 2 : 1) : result.kind === "evidence_check" ? (result.status === "current" ? 0 : 1) : result.kind === "run_result" || result.kind === "local_run_result" ? (result.state.status === "VERIFIED" ? 0 : 1) : 2;

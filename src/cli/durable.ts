@@ -1,3 +1,4 @@
+import { auditDecisions, handleDecision } from "../adapters/decision-gateway.js";
 import { randomUUID } from "node:crypto";
 import { mkdir, readFile, stat } from "node:fs/promises";
 import { dirname, join } from "node:path";
@@ -56,7 +57,7 @@ export async function durableCommand(args: string[]): Promise<DurableCliResult> 
     await checkPlacement(path, p.contract.config);
     if (options.command === "run" && (stable(supplied) !== stable(p.contract.config) || (options.limit !== undefined && options.limit !== p.maxStarts))) throw new DurableError("config_mismatch", "Run configuration and worker-start limit are immutable");
     const append = async (fact: DurableFact): Promise<void> => { p = await store!.append(p.runId, fact); };
-    try { await checkHistoryArtifacts(p); } catch (error) { throw new DurableError("artifact_invalid", String(error)); }
+    try { await checkHistoryArtifacts(p); await auditDecisions(p, store.read().events); } catch (error) { throw new DurableError("artifact_invalid", String(error)); }
     if (p.verification.kind === "completed") {
       try { await checkArtifact(p.verification.evidence); await validateManifest(p, p.verification.evidencePath); }
       catch (error) { throw new DurableError("artifact_invalid", String(error)); }
@@ -80,11 +81,12 @@ export async function durableCommand(args: string[]): Promise<DurableCliResult> 
         const a = p.attempts.at(-1)!; const artifacts = await reconcileWorker(a);
         if (await exists(a.completionPath)) {
           try {
-            const record = await completion(a.completionPath, a.id);
+            const record = await completion(a.completionPath, a.id, p);
             await append({ type: "WorkerCompleted", attemptId: a.id, outcome: record.outcome, record: await artifact(a.completionPath) });
           } catch (error) { throw new DurableError("artifact_invalid", String(error)); }
         } else await append({ type: "AttemptInterrupted", attemptId: a.id, reason: "Factory stopped before a trusted worker completion was committed", artifacts });
       }
+      if (p.state.status === "WAITING_FOR_DECISION") await handleDecision(() => p, append, faults);
       if (p.state.status === "READY") {
         if (p.attempts.length >= p.maxStarts) await append({ type: "RunStopped", reason: "worker_start_budget_exhausted", message: `Worker-start budget exhausted after ${p.maxStarts} reservations` });
         else {
@@ -98,6 +100,7 @@ export async function durableCommand(args: string[]): Promise<DurableCliResult> 
           await append({ type: "WorkerCompleted", attemptId: id, outcome: record.outcome, record: await artifact(attempt.completionPath) });
         }
       }
+      if (p.state.status === "WAITING_FOR_DECISION" && p.decisions?.at(-1)?.kind === "requested") await handleDecision(() => p, append, faults);
       if (p.state.status === "VERIFYING") {
         const a = p.attempts.at(-1)!;
         if (p.verification.kind === "idle") {

@@ -110,7 +110,7 @@ export function cleanEnvironment(): NodeJS.ProcessEnv {
   for (const key of Object.keys(env)) if (/(TOKEN|SECRET|PASSWORD|API_KEY|ASKPASS|SSH_AUTH|GIT_CONFIG|NODE_OPTIONS|NODE_PATH)/i.test(key) || key.toUpperCase() === "SWF_TEST_FAULT") delete env[key];
   return env;
 }
-export async function processInJob(options: { executable: string; args: string[]; cwd: string; directory: string; name: string; timeoutSeconds: number; input?: string; signal?: AbortSignal; onStarted?: (identity: ProcessIdentity) => Promise<void> }): Promise<ProcessRecord> {
+export async function processInJob(options: { executable: string; args: string[]; cwd: string; directory: string; name: string; timeoutSeconds: number; input?: string; trustedGitHub?: boolean; signal?: AbortSignal; onStarted?: (identity: ProcessIdentity) => Promise<void> }): Promise<ProcessRecord> {
   const { executable, args, cwd, directory, name } = options;
   const stem = join(directory, name);
   const stdout = `${stem}.stdout`, stderr = `${stem}.stderr`, resultPath = `${stem}.termination`, cancel = `${stem}.cancel`;
@@ -125,7 +125,7 @@ export async function processInJob(options: { executable: string; args: string[]
   try {
     let closed = false;
     completed = new Promise<string>((done) => {
-      const child = spawn(join(process.env.SystemRoot ?? "C:/Windows", "System32/WindowsPowerShell/v1.0/powershell.exe"), ["-NoProfile", "-NonInteractive", "-File", `${stem}.ps1`, "-Config", `${stem}.json`], { cwd: directory, env: cleanEnvironment(), windowsHide: true, stdio: ["ignore", "ignore", "pipe"] });
+      const child = spawn(join(process.env.SystemRoot ?? "C:/Windows", "System32/WindowsPowerShell/v1.0/powershell.exe"), ["-NoProfile", "-NonInteractive", "-File", `${stem}.ps1`, "-Config", `${stem}.json`], { cwd: directory, env: options.trustedGitHub ? { ...cleanEnvironment(), ...(process.env.GH_TOKEN ? { GH_TOKEN: process.env.GH_TOKEN } : {}), ...(process.env.GITHUB_TOKEN ? { GITHUB_TOKEN: process.env.GITHUB_TOKEN } : {}) } : cleanEnvironment(), windowsHide: true, stdio: ["ignore", "ignore", "pipe"] });
       stopSupervisor = () => { child.kill(); };
       let error = "";
       const deadline = setTimeout(() => { error = "Job supervisor exceeded its launch and cleanup allowance"; child.kill(); }, (options.timeoutSeconds + 45) * 1000);

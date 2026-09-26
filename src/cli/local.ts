@@ -17,7 +17,7 @@ import evidenceSchema from "../contracts/schemas/local-evidence.schema.json" wit
 export async function runLocal(path: string, signal?: AbortSignal): Promise<LocalCliResult> {
   let prepared: Awaited<ReturnType<typeof readConfig>>;
   let pinned: Awaited<ReturnType<typeof programs>>;
-  try { prepared = await readConfig(path); pinned = await programs(prepared.config); }
+  try { prepared = await readConfig(path); if (prepared.config.decisions) throw new Error("Decisions require a durable store"); pinned = await programs(prepared.config); }
   catch (error) { return { kind: "input_error", issues: [String(error)], events: [] }; }
   const { config, baseCommit, commonGit } = prepared;
   const attemptId = randomUUID();

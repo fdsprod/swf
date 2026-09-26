@@ -12,7 +12,7 @@ import localSchema from "../contracts/schemas/local-result.schema.json" with { t
 import evidenceSchema from "../contracts/schemas/local-evidence.schema.json" with { type: "json" };
 import durableSchema from "../contracts/schemas/durable-result.schema.json" with { type: "json" };
 
-export type ErrorCode = "input_error" | "store_busy" | "not_found" | "config_mismatch" | "corrupt_store" | "artifact_invalid" | "ownership_uncertain";
+export type ErrorCode = "input_error" | "store_busy" | "not_found" | "config_mismatch" | "corrupt_store" | "artifact_invalid" | "ownership_uncertain" | "decision_gateway_error" | "publication_uncertain" | "decision_conflict";
 export class DurableError extends Error { constructor(public readonly code: ErrorCode, message: string) { super(message); } }
 const ajv = new Ajv({ allErrors: true });
 for (const schema of [fixtureSchema, resultSchema, configSchema, localSchema, evidenceSchema, durableSchema]) ajv.addSchema(schema);
@@ -35,7 +35,7 @@ export async function storePath(path: string): Promise<string> {
 export async function atomicWrite(path: string, data: unknown): Promise<void> {
   const temp = `${path}.${process.pid}.tmp`; await writeFile(temp, JSON.stringify(data)); await rename(temp, path);
 }
-const points = ["transaction.after_event_insert", "transaction.after_projection_write", "transaction.after_commit", "workspace.after_create", "worker.after_dispatch", "worker.after_completion_artifact", "verification.after_dispatch", "verification.after_command", "verification.after_evidence_artifact"];
+const points = ["decision.after_publish", "transaction.after_event_insert", "transaction.after_projection_write", "transaction.after_commit", "workspace.after_create", "worker.after_dispatch", "worker.after_completion_artifact", "verification.after_dispatch", "verification.after_command", "verification.after_evidence_artifact"];
 export class Faults {
   private hook?: { point: string; eventType?: string; marker: string };
   constructor() {

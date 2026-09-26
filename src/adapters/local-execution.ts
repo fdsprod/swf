@@ -4,6 +4,11 @@ import type { AgentOutcome, VerificationResult } from "../contracts/index.js";
 import type { LocalConfig, ProcessRecord } from "../contracts/local.js";
 import type { ProcessIdentity } from "../contracts/durable.js";
 import { processInJob } from "./windows-job.js";
+import { Ajv } from "ajv";
+import decisionSchema from "../contracts/schemas/decision-wire.schema.json" with { type: "json" };
+import type { DecisionWireResponse } from "../contracts/decisions.js";
+const decisionWire = new Ajv().compile<DecisionWireResponse>(decisionSchema);
+export interface DecisionAuthority { runId: string; unitId: string; attemptId: string }
 
 export function commandResult(attemptId: string, specId: string, process: ProcessRecord): VerificationResult {
   return {
@@ -29,7 +34,7 @@ export async function executeRestricted(config: LocalConfig, workspace: string, 
 export function workerArgs(config: LocalConfig, workspace: string, commonGit: string, schema: string): string[] {
   return [...config.worker.prefixArgs, "--no-daemon", "--ask-for-approval", "never", "exec", "--ignore-user-config", "-c", 'windows.sandbox="elevated"', "-c", 'default_permissions="factory"', "-c", permissions(config, workspace, commonGit), "-c", "permissions.factory.network.enabled=false", "-c", "mcp_servers={}", "--ephemeral", "--cd", workspace, "--json", "--color", "never", "--output-schema", schema, "-"];
 }
-export async function outcome(record: ProcessRecord): Promise<AgentOutcome> {
+export async function outcome(record: ProcessRecord, authority?: DecisionAuthority): Promise<AgentOutcome> {
   const failed = (reason: string): AgentOutcome => ({ kind: "failed", reason, evidence: [] });
   if (record.termination.kind !== "exited" || record.termination.exitCode !== 0) return failed(`Worker process did not succeed: ${JSON.stringify(record.termination)}`);
   try {
@@ -43,7 +48,17 @@ export async function outcome(record: ProcessRecord): Promise<AgentOutcome> {
       if (event.type === "turn.completed") terminal = true;
     }
     if (!terminal || typeof message !== "string") throw new Error("Missing terminal structured outcome");
-    const wire = JSON.parse(message) as Record<string, unknown>;
+    let wire = JSON.parse(message) as Record<string, unknown>;
+    if (authority && wire && Object.hasOwn(wire, "outcome")) {
+      if (!decisionWire(wire)) throw new Error("Invalid decision wire response");
+      const nested = wire.outcome;
+      if (nested.kind === "decision_required") {
+        const d = nested.decision;
+        if (!d.question.trim() || !d.reason.trim() || d.options.some(o => !o.id.trim() || !o.description.trim()) || new Set(d.options.map(o => o.id)).size !== d.options.length) throw new Error("Invalid decision question or options");
+        return { kind: "decision_required", decision: { ...d, id: `${authority.runId}:decision:${authority.attemptId}`, runId: authority.runId, unitId: authority.unitId, evidence: [] } };
+      }
+      wire = { kind: nested.kind, message: nested.message };
+    }
     if (!wire || Object.keys(wire).sort().join(",") !== "kind,message" || !["completed", "blocked", "failed"].includes(String(wire.kind)) || typeof wire.message !== "string" || !wire.message.trim()) throw new Error("Invalid structured outcome");
     return wire.kind === "completed" ? { kind: "completed", summary: wire.message, evidence: [] } : { kind: wire.kind as "blocked" | "failed", reason: wire.message, evidence: [] };
   } catch (error) { return failed(`Invalid Codex response: ${String(error)}`); }

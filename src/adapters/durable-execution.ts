@@ -15,12 +15,12 @@ export async function checkArtifact(ref: Artifact): Promise<void> { if ((await a
 export async function checkPrograms(p: DurableProjection): Promise<void> {
   if (contractDigest(p.contract.config, await programs(p.contract.config)) !== p.contract.digest) throw new Error("Pinned execution or verification inputs changed");
 }
-export async function completion(path: string, attemptId: string): Promise<WorkerCompletion> {
+export async function completion(path: string, attemptId: string, p?: DurableProjection): Promise<WorkerCompletion> {
   const value: unknown = JSON.parse(await readFile(path, "utf8")); validateStored("completion", value); const record = value as WorkerCompletion;
-  if (record.attemptId !== attemptId || record.outcome.kind === "decision_required") throw new Error("Worker completion identity is invalid");
+  if (record.attemptId !== attemptId) throw new Error("Worker completion identity is invalid");
   await checkArtifact(record.process.stdout); await checkArtifact(record.process.stderr);
   // A policy rejection may narrow a completed process outcome to failed. It cannot promote failure.
-  const parsed = await outcome(record.process);
+  const parsed = await outcome(record.process, p?.contract.config.decisions ? { runId: p.runId, unitId: p.graph.units[0]!.id, attemptId } : undefined);
   if (record.outcome.kind !== "failed" && stable(parsed) !== stable(record.outcome)) throw new Error("Completion does not match process output");
   return record;
 }
@@ -29,7 +29,7 @@ export async function checkHistoryArtifacts(p: DurableProjection): Promise<void>
   for (const a of p.attempts) {
     if (a.kind === "interrupted") for (const ref of a.artifacts) await checkArtifact(ref);
     if (a.kind === "completed") {
-      await checkArtifact(a.record); const record = await completion(a.record.path, a.id);
+      await checkArtifact(a.record); const record = await completion(a.record.path, a.id, p);
       if (stable(a.outcome) !== stable(record.outcome)) throw new Error("Completion outcome changed");
     }
   }
@@ -57,10 +57,10 @@ export async function performWorker(p: DurableProjection, a: DurableAttempt, sta
   if (p.workspace.kind !== "ready") throw new Error("Worker requires a ready workspace");
   const config = p.contract.config, workspace = p.workspace.workspace, directory = dirname(a.completionPath);
   await mkdir(directory, { recursive: true });
-  const schema = await save(join(directory, "worker-schema.json"), JSON.stringify({ type: "object", additionalProperties: false, required: ["kind", "message"], properties: { kind: { type: "string", enum: ["completed", "blocked", "failed"] }, message: { type: "string" } } }));
+  const schema = await save(join(directory, "worker-schema.json"), (config.decisions ? await readFile(new URL("../contracts/schemas/decision-wire.schema.json", import.meta.url), "utf8") : JSON.stringify({ type: "object", additionalProperties: false, required: ["kind", "message"], properties: { kind: { type: "string", enum: ["completed", "blocked", "failed"] }, message: { type: "string" } } })));
   const args = workerArgs(config, workspace.path, commonGit(workspace), schema.path);
-  const record = await executeRestricted(config, workspace.path, commonGit(workspace), directory, "worker", config.worker.executable, args, config.worker.timeoutSeconds, undefined, JSON.stringify({ request: config.request, unit: p.graph.units[0] }), resolve(config.worker.executable).toLowerCase() === resolve(config.sandboxExecutable).toLowerCase(), workspace.path, started);
-  let result = await outcome(record);
+  const record = await executeRestricted(config, workspace.path, commonGit(workspace), directory, "worker", config.worker.executable, args, config.worker.timeoutSeconds, undefined, JSON.stringify(config.decisions ? { schemaVersion: 1, runId: p.runId, attemptId: a.id, workspace, context: { request: config.request, unit: p.graph.units[0], priorAttempts: p.attempts.filter(prior => prior.id !== a.id), decisions: (p.decisions ?? []).flatMap(d => d.kind === "resolved" ? [d.resolution] : []), evidence: p.attempts.flatMap(prior => prior.kind === "completed" ? [{ id: prior.id, kind: "file", uri: prior.record.path, digest: prior.record.digest }] : []), repositoryContext: [{ path: workspace.path, baseCommit: p.baseCommit }] } } : { request: config.request, unit: p.graph.units[0] }), resolve(config.worker.executable).toLowerCase() === resolve(config.sandboxExecutable).toLowerCase(), workspace.path, started);
+  let result = await outcome(record, config.decisions ? { runId: p.runId, unitId: p.graph.units[0]!.id, attemptId: a.id } : undefined);
   try {
     const changed = changes(await baseSnapshot(workspace), await snapshot(workspace.path));
     if (changed.some(path => !config.allowedPaths.some(a => a.endsWith("/") ? path.startsWith(a) : path === a))) throw new Error("Worker changed a forbidden path");
@@ -101,7 +101,7 @@ export async function reconcileWorker(a: DurableAttempt): Promise<Artifact[]> {
 export async function verify(p: DurableProjection, faults: Faults): Promise<LocalEvidence> {
   if (p.workspace.kind !== "ready" || p.verification.kind !== "intent") throw new Error("Missing verification intent");
   const a = p.attempts.at(-1)!; if (a.kind !== "completed") throw new Error("Verification requires completed worker");
-  const worker = await completion(a.record.path, a.id), workspace = p.workspace.workspace, config = p.contract.config;
+  const worker = await completion(a.record.path, a.id, p), workspace = p.workspace.workspace, config = p.contract.config;
   const before = await baseSnapshot(workspace), candidate = await snapshot(workspace.path), changedPaths = changes(before, candidate);
   const directory = join(dirname(p.verification.evidencePath), `check-${randomUUID()}`); await mkdir(directory, { recursive: true });
   const commands: LocalEvidence["commands"] = [], results: VerificationResult[] = [], issues: string[] = [];
@@ -131,7 +131,7 @@ export async function validateManifest(p: DurableProjection, path: string): Prom
   const value: unknown = JSON.parse(await readFile(path, "utf8")); validateStored("evidence", value); const e = value as LocalEvidence;
   if (p.workspace.kind !== "ready" || p.verification.kind === "idle" || e.attemptId !== p.verification.attemptId || stable(e.contract) !== stable(p.contract) || stable(e.workspace) !== stable(p.workspace.workspace)) throw new Error("Evidence does not match recorded intent");
   const a = p.attempts.at(-1)!; if (a.kind !== "completed") throw new Error("Evidence has no completed worker");
-  const worker = await completion(a.record.path, a.id);
+  const worker = await completion(a.record.path, a.id, p);
   if (stable(e.worker) !== stable({ process: worker.process, outcome: worker.outcome })) throw new Error("Manifest worker record changed");
   await reconcileWorkspace(e.workspace); await checkPrograms(p);
   if (stable(await snapshot(e.workspace.path)) !== stable(e.candidate)) throw new Error("Candidate content changed");

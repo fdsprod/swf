@@ -46,7 +46,7 @@ export async function snapshot(root: string): Promise<LocalEvidence["candidate"]
   return { digest: hash(JSON.stringify(files)), files };
 }
 export async function programs(config: LocalConfig): Promise<Artifact[]> {
-  const paths = new Set<string>([config.worker.executable, config.sandboxExecutable, ...config.commands.map(c => c.executable)]);
+  const paths = new Set<string>([...(config.decisions ? [config.decisions.executable] : []), config.worker.executable, config.sandboxExecutable, ...config.commands.map(c => c.executable)]);
   for (const root of config.verificationInputs) for (const path of await filePaths(root)) paths.add(path);
   const result: Artifact[] = [];
   for (const path of [...paths].sort()) result.push(await artifact(path));

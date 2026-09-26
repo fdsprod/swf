@@ -15,13 +15,20 @@ export async function readConfig(path: string): Promise<{ config: LocalConfig; b
   const value: unknown = JSON.parse(await readFile(path, "utf8"));
   if (!validate(value)) throw new Error(ajv.errorsText(validate.errors));
   const config = value;
+  if (config.decisions) {
+    const repo = /^https:\/\/github\.com\/([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+?)(?:\.git)?$/.exec(config.request.repository.url);
+    const source = config.request.source;
+    if (!repo || source.provider !== "github" || !/^[1-9][0-9]*$/.test(source.externalId) || !Number.isSafeInteger(Number(source.externalId)) || (source.url !== undefined && source.url !== 'https://github.com/' + repo[1] + '/' + repo[2] + '/issues/' + source.externalId)) throw new Error("Decision source must identify the same GitHub repository and issue");
+    if (config.decisions.prefixArgs.some(a => a.startsWith("-"))) throw new Error("Decision prefix arguments cannot contain options");
+    await canonical(config.decisions.executable);
+  }
   const errors = verificationContractIssues(config.verification);
   if (errors.length) throw new Error(errors.join("; "));
   for (const p of [config.repositoryPath, config.workspaceRoot, config.artifactRoot, ...config.blockedReadPaths, ...config.verificationInputs]) {
     if (!isAbsolute(p)) throw new Error(`Absolute path required: ${p}`);
     await canonical(p);
   }
-  for (const p of [config.worker.executable, config.sandboxExecutable, ...config.commands.map(c => c.executable)]) if (!isAbsolute(p)) throw new Error("Executable paths must be absolute");
+  for (const p of [...(config.decisions ? [config.decisions.executable] : []), config.worker.executable, config.sandboxExecutable, ...config.commands.map(c => c.executable)]) if (!isAbsolute(p)) throw new Error("Executable paths must be absolute");
   for (const a of [config.repositoryPath, config.workspaceRoot, config.artifactRoot]) for (const b of [config.repositoryPath, config.workspaceRoot, config.artifactRoot]) {
     if (a !== b && within(a, b)) throw new Error("Repository, workspace, and artifacts must be separate");
   }
@@ -33,7 +40,7 @@ export async function readConfig(path: string): Promise<{ config: LocalConfig; b
   }
   const ids = config.commands.map(c => c.specId);
   if (new Set(ids).size !== ids.length || ids.length !== config.verification.required.length || ids.some(id => !config.verification.required.some(s => s.id === id))) throw new Error("Command bindings must match the verification contract");
-  for (const input of [...config.verificationInputs, config.worker.executable, config.sandboxExecutable, ...config.commands.map(c => c.executable)]) if (within(config.workspaceRoot, input)) throw new Error("Programs and verification inputs must be outside the workspace");
+  for (const input of [...config.verificationInputs, ...(config.decisions ? [config.decisions.executable] : []), config.worker.executable, config.sandboxExecutable, ...config.commands.map(c => c.executable)]) if (within(config.workspaceRoot, input)) throw new Error("Programs and verification inputs must be outside the workspace");
   // Wrapper arguments are data only. Codex policy and host settings belong to this adapter.
   if (config.worker.prefixArgs.some(a => a.startsWith("-"))) throw new Error("Worker prefix arguments cannot contain options");
   const knownHome = resolve(process.env.CODEX_HOME ?? join(homedir(), ".codex")).toLowerCase();
