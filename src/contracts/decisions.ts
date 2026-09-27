@@ -1,3 +1,4 @@
+import type { Instructions } from "./skills.js";
 import type { DecisionRequest, EvidenceRef, WorkRequest, WorkUnit } from "./index.js";
 import type { Artifact, LocalWorkspace } from "./local.js";
 import type { DurableAttempt } from "./durable.js";
@@ -43,6 +44,7 @@ export type DecisionWireResponse = { outcome:
   | { kind: "decision_required"; decision: { question: string; reason: string; options: { id: string; description: string; consequences: string[] }[]; impact: string[]; reversible: boolean } }
 };
 export interface ContextPackage {
+  instructions?: Instructions;
   repair?: RepairContext;
   request: WorkRequest;
   unit: WorkUnit;

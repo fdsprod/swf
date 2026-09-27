@@ -1,3 +1,4 @@
+import type { Skills } from "./skills.js";
 import type { AgentOutcome, FactoryEvent, VerificationContract, WorkGraph, WorkRequest, UnitExecutionState } from "./index.js";
 import type { DecisionConfig } from "./decisions.js";
 import type { RepairConfig } from "./repair.js";
@@ -16,6 +17,7 @@ export interface LocalConfig {
   protectedPaths: string[];
   blockedReadPaths: string[];
   verificationInputs: string[];
+  skills?: Skills;
   decisions?: DecisionConfig;
   repair?: RepairConfig;
 }

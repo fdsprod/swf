@@ -70,3 +70,7 @@ The project is one npm package. `src/contracts` owns protocol types, schemas, an
 Commands in P0 fixtures remain opaque labels. Real verification commands use an executable and argument vector.
 
 See the [P5 execution report](docs/phase-reports/p5.md), [P4 local verification report](docs/phase-reports/p4.md), [P3 local verification report](docs/phase-reports/p3.md), [P2 execution report](docs/phase-reports/p2.md), [P1 acceptance report](docs/phase-reports/p1.md), [P0 acceptance report](docs/phase-reports/p0.md), [bootstrap plan](docs/bootstrap-plan.md), and [execution boundaries](docs/adr/local-execution.md).
+
+## Worker skills
+
+Optional worker instructions use `LocalConfig.skills` or GitHub `runtime.skills`. See [the skills guide](docs/agent-skills.md) and [the editable skills object](examples/agent-skills.json). If `skills` is absent, the existing behavior stays unchanged.

@@ -1809,6 +1809,9 @@
               "items": {
                 "$ref": "https://swf.local/schemas/p1/local-config.schema.json#/definitions/text"
               }
+            },
+            "skills": {
+              "$ref": "https://swf.local/schemas/p1/local-config.schema.json#/properties/skills"
             }
           }
         },
