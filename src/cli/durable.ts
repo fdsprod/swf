@@ -66,7 +66,10 @@ export async function durableCommand(args: string[]): Promise<DurableCliResult> 
         } else prepared = await readConfig(options.local!);
       }
       await checkPlacement(path, prepared.config);
-      const config = prepared.config, pinned = await programs(config, intake ? [intake.input.github.executable, intake.input.git.executable] : []), request = config.request;
+      const config = prepared.config, request = config.request;
+      let pinned: Awaited<ReturnType<typeof programs>>;
+      try { pinned = await programs(config, intake ? [intake.input.github.executable, intake.input.git.executable] : []); }
+      catch (error) { if (!config.skills) throw error; throw new DurableError("input_error", String(error)); }
       const unit = { id: `${request.id}:unit:1`, objective: request.objective, constraints: request.constraints, verification: config.verification, metadata: request.metadata };
       current = await store.append(proposedRunId, { type: "RunCreated", ...(intake ? { intake } : {}), contract: { digest: contractDigest(config, pinned), config, programs: pinned }, graph: { id: `${request.id}:graph`, requestId: request.id, units: [unit], dependencies: [] }, baseCommit: prepared.baseCommit, maxStarts: options.limit ?? 5 });
     }

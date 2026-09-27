@@ -1,3 +1,4 @@
+import { selectedSkills } from "./skills.js";
 import { readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import type { AgentOutcome, VerificationResult } from "../contracts/index.js";
@@ -23,6 +24,11 @@ export function permissions(config: LocalConfig, workspace: string, commonGit: s
   const rules: Record<string, string> = { ":root": "read", ":workspace_roots": "write" };
   rules[resolve(workspace).replaceAll("\\", "/")] = "write";
   for (const path of [commonGit, join(workspace, ".git"), ...config.protectedPaths.map(p => join(workspace, p))]) rules[resolve(path).replaceAll("\\", "/")] = "read";
+  if (config.skills) {
+    for (const skill of selectedSkills(config.skills)) for (const path of [skill.entrypoint, ...skill.assets]) rules[resolve(skill.root, path).replaceAll("\\", "/")] = "read";
+    const assignment = config.skills.assignment;
+    if (assignment.role === "implementation" && assignment.design.kind === "provided") rules[resolve(assignment.design.path).replaceAll("\\", "/")] = "read";
+  }
   for (const path of config.blockedReadPaths) rules[resolve(path).replaceAll("\\", "/")] = "deny";
   return `permissions.factory.filesystem={${Object.entries(rules).map(([key, value]) => `${JSON.stringify(key)}=${JSON.stringify(value)}`).join(",")}}`;
 }

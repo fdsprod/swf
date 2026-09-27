@@ -1,3 +1,4 @@
+import { loadSkills, SkillArtifactError } from "../adapters/skills.js";
 import { randomUUID } from "node:crypto";
 import { mkdir, readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
@@ -38,8 +39,11 @@ export async function runLocal(path: string, signal?: AbortSignal): Promise<Loca
   const schema = await save(join(directory, "worker-schema.json"), JSON.stringify({ type: "object", additionalProperties: false, required: ["kind", "message"], properties: { kind: { type: "string", enum: ["completed", "blocked", "failed"] }, message: { type: "string" } } }));
   const result = await run(config.request, config.verification, {
     async execute(unit) {
+      let instructions = {};
+      try { const loaded = await loadSkills(config, pinned); if (loaded) instructions = { instructions: loaded.instructions }; }
+      catch (error) { throw new SkillArtifactError(String(error)); }
       const args = workerArgs(config, workspace.path, commonGit, schema.path);
-      workerProcess = await executeRestricted(config, workspace.path, commonGit, directory, "worker", config.worker.executable, args, config.worker.timeoutSeconds, signal, JSON.stringify({ request: config.request, unit }), resolve(config.worker.executable).toLowerCase() === resolve(config.sandboxExecutable).toLowerCase());
+      workerProcess = await executeRestricted(config, workspace.path, commonGit, directory, "worker", config.worker.executable, args, config.worker.timeoutSeconds, signal, JSON.stringify({ request: config.request, unit, ...instructions }), resolve(config.worker.executable).toLowerCase() === resolve(config.sandboxExecutable).toLowerCase());
       workerOutcome = await outcome(workerProcess);
       try {
         candidate = await snapshot(workspace.path); changedPaths = changes(before, candidate);

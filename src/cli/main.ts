@@ -1,3 +1,4 @@
+import { SkillArtifactError } from "../adapters/skills.js";
 import { readFile } from "node:fs/promises";
 import type { CliResult, RunFixture } from "../contracts/index.js";
 import { fixtureIssues } from "../contracts/validation.js";
@@ -39,6 +40,9 @@ async function main(args: string[]): Promise<CliResult | LocalCliResult | Durabl
   return run(fixture.request, fixture.verification, scriptedWorker(fixture.script.agentOutcome), scriptedVerifier(fixture.script.verificationResults));
 }
 
-const result = await main(process.argv.slice(2));
+const result = await main(process.argv.slice(2)).catch((error: unknown): DurableCliResult => {
+  if (error instanceof SkillArtifactError) return { kind: "durable_error", code: "artifact_invalid", issues: [error.message] };
+  throw error;
+});
 process.stdout.write(`${JSON.stringify(result)}\n`);
 process.exitCode = result.kind === "not_implemented" ? 3 : result.kind === "durable_status" ? 0 : result.kind === "durable_result" ? (result.projection.state.status === "WAITING_FOR_DECISION" ? 0 : result.projection.intake ? (result.projection.delivery.kind === "created" && result.projection.delivery.pullRequest.state.kind !== "closed" && result.projection.ci.kind === "passed" ? 0 : 1) : result.projection.state.status === "VERIFIED" ? 0 : 1) : result.kind === "durable_error" ? (result.code === "input_error" ? 2 : 1) : result.kind === "evidence_check" ? (result.status === "current" ? 0 : 1) : result.kind === "run_result" || result.kind === "local_run_result" ? (result.state.status === "VERIFIED" ? 0 : 1) : 2;

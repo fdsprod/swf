@@ -182,6 +182,160 @@
           "maximum": 100
         }
       }
+    },
+    "skills": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "assignment",
+        "catalog",
+        "common",
+        "byRole"
+      ],
+      "properties": {
+        "assignment": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "role"
+              ],
+              "properties": {
+                "role": {
+                  "enum": [
+                    "tester",
+                    "designer"
+                  ]
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "role",
+                "design"
+              ],
+              "properties": {
+                "role": {
+                  "const": "implementation"
+                },
+                "design": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "kind"
+                      ],
+                      "properties": {
+                        "kind": {
+                          "const": "none"
+                        }
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "kind",
+                        "path"
+                      ],
+                      "properties": {
+                        "kind": {
+                          "const": "provided"
+                        },
+                        "path": {
+                          "type": "string",
+                          "pattern": "\\S"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        "catalog": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "root",
+              "entrypoint",
+              "assets"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "\\S"
+              },
+              "root": {
+                "type": "string",
+                "pattern": "\\S"
+              },
+              "entrypoint": {
+                "type": "string",
+                "pattern": "\\S"
+              },
+              "assets": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "\\S"
+                }
+              }
+            }
+          }
+        },
+        "common": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "\\S"
+          },
+          "minItems": 1,
+          "contains": {
+            "const": "ste"
+          }
+        },
+        "byRole": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "tester",
+            "designer",
+            "implementation"
+          ],
+          "properties": {
+            "tester": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "\\S"
+              }
+            },
+            "designer": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "\\S"
+              }
+            },
+            "implementation": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "\\S"
+              }
+            }
+          }
+        }
+      }
     }
   },
   "definitions": {

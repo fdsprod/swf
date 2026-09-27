@@ -1,3 +1,4 @@
+import { loadSkills } from "./skills.js";
 import { createHash } from "node:crypto";
 import { lstat, readdir, readFile, realpath, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
@@ -50,6 +51,15 @@ export async function programs(config: LocalConfig, extra: string[] = []): Promi
   for (const root of config.verificationInputs) for (const path of await filePaths(root)) paths.add(path);
   const result: Artifact[] = [];
   for (const path of [...paths].sort()) result.push(await artifact(path));
+  if (config.skills) {
+    const selected = (await loadSkills(config))!.programs;
+    for (const ref of selected) {
+      const same = (path: string) => process.platform === "win32" ? path.toLowerCase() : path;
+      const index = result.findIndex(p => same(resolve(p.path)) === same(ref.path));
+      if (index < 0) result.push(ref); else result[index] = ref;
+    }
+    result.sort((a, b) => a.path < b.path ? -1 : a.path > b.path ? 1 : 0);
+  }
   return result;
 }
 export const contractDigest = (config: LocalConfig, pinned: Artifact[]): string => hash(JSON.stringify({ config, programs: pinned }));

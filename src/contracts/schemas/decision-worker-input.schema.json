@@ -37,6 +37,78 @@
         "repositoryContext"
       ],
       "properties": {
+        "instructions": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["assignment", "skills"],
+          "properties": {
+            "assignment": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["role"],
+                  "properties": {
+                    "role": { "enum": ["tester", "designer"] }
+                  }
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["role", "design"],
+                  "properties": {
+                    "role": { "const": "implementation" },
+                    "design": {
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": ["kind"],
+                          "properties": {
+                            "kind": { "const": "none" }
+                          }
+                        },
+                        {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": ["kind", "artifact", "text"],
+                          "properties": {
+                            "kind": { "const": "provided" },
+                            "artifact": {
+                              "$ref": "https://swf.local/schemas/p1/local-result.schema.json#/definitions/artifact"
+                            },
+                            "text": { "type": "string" }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
+              ]
+            },
+            "skills": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["id", "entrypoint", "text", "assets"],
+                "properties": {
+                  "id": { "type": "string", "pattern": "\\S" },
+                  "entrypoint": {
+                    "$ref": "https://swf.local/schemas/p1/local-result.schema.json#/definitions/artifact"
+                  },
+                  "text": { "type": "string" },
+                  "assets": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "https://swf.local/schemas/p1/local-result.schema.json#/definitions/artifact"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
         "request": {
           "$ref": "https://swf.local/schemas/p0/run-fixture.schema.json#/definitions/workRequest"
         },

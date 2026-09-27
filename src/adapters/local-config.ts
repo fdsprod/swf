@@ -1,3 +1,4 @@
+import { loadSkills } from "./skills.js";
 import { Ajv } from "ajv";
 import { access, readFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, resolve } from "node:path";
@@ -61,5 +62,6 @@ export async function prepareConfig(value: unknown): Promise<{ config: LocalConf
   if (tree.some(line => line.startsWith("120000 ") || line.startsWith("160000 "))) throw new Error("Base tree links and submodules are not supported");
   if (tree.some(line => line.endsWith("\t.codex/config.toml"))) throw new Error("Base tree contains project Codex configuration");
   const commonGit = resolve(config.repositoryPath, git(config.repositoryPath, "rev-parse", "--git-common-dir"));
+  await loadSkills(config);
   return { config, baseCommit, commonGit };
 }

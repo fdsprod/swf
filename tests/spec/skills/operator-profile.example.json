@@ -1,0 +1,15 @@
+{
+  "assignment": { "role": "implementation", "design": { "kind": "none" } },
+  "catalog": [
+    { "id": "ste", "root": "C:/operator/skills", "entrypoint": "ste/SKILL.md", "assets": [] },
+    { "id": "tdd", "root": "C:/operator/skills", "entrypoint": "tdd/SKILL.md", "assets": [] },
+    { "id": "data-structure-design", "root": "C:/operator/skills", "entrypoint": "data-structure-design/SKILL.md", "assets": [] },
+    { "id": "tracer-bullets", "root": "C:/operator/skills", "entrypoint": "tracer-bullets/SKILL.md", "assets": [] }
+  ],
+  "common": ["ste"],
+  "byRole": {
+    "tester": ["tdd"],
+    "designer": ["data-structure-design", "tracer-bullets"],
+    "implementation": []
+  }
+}

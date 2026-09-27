@@ -1,3 +1,4 @@
+import { loadSkills } from "./skills.js";
 import { execFileSync } from "node:child_process";
 import { mkdir, readFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
@@ -82,11 +83,14 @@ export async function checkInitialRepairCandidate(p: DurableProjection, a: Durab
 }
 async function workerInput(p: DurableProjection, a: DurableAttempt, events: DurableEvent[]): Promise<string> {
   const config = p.contract.config, unit = p.graph.units[0]!;
-  if (!config.decisions && !config.repair) return JSON.stringify({ request: config.request, unit });
+  const loaded = await loadSkills(config, p.contract.programs);
+  const instructions = loaded ? { instructions: loaded.instructions } : {};
+  if (!config.decisions && !config.repair) return JSON.stringify({ request: config.request, unit, ...instructions });
   if (p.workspace.kind !== "ready") throw new Error("Worker context requires a ready workspace");
   const input: DecisionWorkerInput = {
     schemaVersion: 1, runId: p.runId, attemptId: a.id, workspace: p.workspace.workspace,
     context: {
+      ...instructions,
       request: config.request, unit, priorAttempts: p.attempts.filter(prior => prior.ordinal < a.ordinal),
       decisions: (p.decisions ?? []).flatMap(d => d.kind === "resolved" ? [d.resolution] : []),
       evidence: p.attempts.flatMap(prior => prior.kind === "completed" && prior.ordinal < a.ordinal ? [{ id: prior.id, kind: "file" as const, uri: prior.record.path, digest: prior.record.digest }] : []),
