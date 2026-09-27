@@ -1,27 +1,18 @@
 {
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "outcome"
-  ],
+  "required": ["outcome"],
   "properties": {
     "outcome": {
       "anyOf": [
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "kind",
-            "message"
-          ],
+          "required": ["kind", "message"],
           "properties": {
             "kind": {
               "type": "string",
-              "enum": [
-                "completed",
-                "blocked",
-                "failed"
-              ]
+              "enum": ["completed", "blocked", "failed"]
             },
             "message": {
               "type": "string"
@@ -31,10 +22,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "kind",
-            "decision"
-          ],
+          "required": ["kind", "decision"],
           "properties": {
             "kind": {
               "type": "string",
@@ -62,11 +50,7 @@
                   "items": {
                     "type": "object",
                     "additionalProperties": false,
-                    "required": [
-                      "id",
-                      "description",
-                      "consequences"
-                    ],
+                    "required": ["id", "description", "consequences"],
                     "properties": {
                       "id": {
                         "type": "string"

@@ -1,20 +1,43 @@
 {
   "schemaVersion": 1,
   "request": {
-    "id": "example", "source": { "provider": "fixture", "externalId": "example" },
+    "id": "example",
+    "source": { "provider": "fixture", "externalId": "example" },
     "repository": { "url": "fixture://offline", "baseRef": "main" },
     "objective": "Reject a false completion claim",
-    "constraints": [], "acceptanceCriteria": [], "metadata": {}
+    "constraints": [],
+    "acceptanceCriteria": [],
+    "metadata": {}
   },
   "verification": {
-    "required": [{ "kind": "command", "id": "behavior", "command": "scripted-behavior-check" }],
+    "required": [
+      {
+        "kind": "command",
+        "id": "behavior",
+        "command": "scripted-behavior-check"
+      }
+    ],
     "completionPolicy": { "requireAll": true }
   },
   "script": {
     "agentOutcome": {
-      "kind": "completed", "summary": "The worker claims everything passed",
-      "evidence": [{ "id": "worker-claim", "kind": "test_result", "uri": "memory:worker-claim" }]
+      "kind": "completed",
+      "summary": "The worker claims everything passed",
+      "evidence": [
+        {
+          "id": "worker-claim",
+          "kind": "test_result",
+          "uri": "memory:worker-claim"
+        }
+      ]
     },
-    "verificationResults": [{ "specId": "behavior", "status": "failed", "summary": "The independent scripted check found incorrect behavior", "evidence": [] }]
+    "verificationResults": [
+      {
+        "specId": "behavior",
+        "status": "failed",
+        "summary": "The independent scripted check found incorrect behavior",
+        "evidence": []
+      }
+    ]
   }
 }

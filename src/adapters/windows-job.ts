@@ -81,12 +81,34 @@ try {
 `;
 
 // Windows CreateProcess command-line quoting, without a shell.
-function quote(value: string): string { return `"${value.replace(/(\\*)"/g, '$1$1\\"').replace(/(\\+)$/, "$1$1")}"`; }
-const jobName = (stem: string): string => `Local\\SWF-${hash(stem.toLowerCase())}`;
+function quote(value: string): string {
+  return `"${value.replace(/(\\*)"/g, '$1$1\\"').replace(/(\\+)$/, "$1$1")}"`;
+}
+const jobName = (stem: string): string =>
+  `Local\\SWF-${hash(stem.toLowerCase())}`;
 let ownerCreatedAt: string | undefined;
 function ownerCreation(): string {
-  ownerCreatedAt ??= execFileSync(join(process.env.SystemRoot ?? "C:/Windows", "System32/WindowsPowerShell/v1.0/powershell.exe"), ["-NoProfile", "-NonInteractive", "-Command", `[Diagnostics.Process]::GetProcessById(${process.pid}).StartTime.ToUniversalTime().ToString('o')`], { encoding: "utf8", windowsHide: true, timeout: 10000, env: cleanEnvironment() }).trim();
-  if (!/^\d{4}-\d{2}-\d{2}T/.test(ownerCreatedAt)) throw new Error("Cannot observe factory process creation identity");
+  ownerCreatedAt ??= execFileSync(
+    join(
+      process.env.SystemRoot ?? "C:/Windows",
+      "System32/WindowsPowerShell/v1.0/powershell.exe",
+    ),
+    [
+      "-NoProfile",
+      "-NonInteractive",
+      "-Command",
+      `[Diagnostics.Process]::GetProcessById(${process.pid}).StartTime.ToUniversalTime().ToString('o')`,
+    ],
+    {
+      encoding: "utf8",
+      windowsHide: true,
+      timeout: 10000,
+      env: cleanEnvironment(),
+    },
+  ).trim();
+  if (!/^\d{4}-\d{2}-\d{2}T/.test(ownerCreatedAt)) {
+    throw new Error("Cannot observe factory process creation identity");
+  }
   return ownerCreatedAt;
 }
 export function jobIsStopped(stem: string): boolean {
@@ -101,62 +123,212 @@ public static class JobRecovery {
 }
 '@
 [JobRecovery]::Empty('${jobName(stem)}')`;
-  const result = execFileSync(join(process.env.SystemRoot ?? "C:/Windows", "System32/WindowsPowerShell/v1.0/powershell.exe"), ["-NoProfile", "-NonInteractive", "-Command", script], { encoding: "utf8", windowsHide: true, timeout: 10000, env: cleanEnvironment() }).trim();
-  if (result !== "True" && result !== "False") throw new Error("Cannot inspect owned Windows Job");
+  const result = execFileSync(
+    join(
+      process.env.SystemRoot ?? "C:/Windows",
+      "System32/WindowsPowerShell/v1.0/powershell.exe",
+    ),
+    ["-NoProfile", "-NonInteractive", "-Command", script],
+    {
+      encoding: "utf8",
+      windowsHide: true,
+      timeout: 10000,
+      env: cleanEnvironment(),
+    },
+  ).trim();
+  if (result !== "True" && result !== "False") {
+    throw new Error("Cannot inspect owned Windows Job");
+  }
   return result === "True";
 }
 export function cleanEnvironment(): NodeJS.ProcessEnv {
   const env = { ...process.env };
-  for (const key of Object.keys(env)) if (/(TOKEN|SECRET|PASSWORD|API_KEY|ASKPASS|SSH_AUTH|GIT_CONFIG|NODE_OPTIONS|NODE_PATH)/i.test(key) || key.toUpperCase() === "SWF_TEST_FAULT") delete env[key];
+  for (const key of Object.keys(env)) {
+    if (
+      /(TOKEN|SECRET|PASSWORD|API_KEY|ASKPASS|SSH_AUTH|GIT_CONFIG|NODE_OPTIONS|NODE_PATH)/i.test(
+        key,
+      ) ||
+      key.toUpperCase() === "SWF_TEST_FAULT"
+    ) {
+      delete env[key];
+    }
+  }
   return env;
 }
-export async function processInJob(options: { executable: string; args: string[]; cwd: string; directory: string; name: string; timeoutSeconds: number; input?: string; trustedGitHub?: boolean; trustedEnvironment?: NodeJS.ProcessEnv; signal?: AbortSignal; onStarted?: (identity: ProcessIdentity) => Promise<void> }): Promise<ProcessRecord> {
+export async function processInJob(options: {
+  executable: string;
+  args: string[];
+  cwd: string;
+  directory: string;
+  name: string;
+  timeoutSeconds: number;
+  input?: string;
+  trustedGitHub?: boolean;
+  trustedEnvironment?: NodeJS.ProcessEnv;
+  signal?: AbortSignal;
+  onStarted?: (identity: ProcessIdentity) => Promise<void>;
+}): Promise<ProcessRecord> {
   const { executable, args, cwd, directory, name } = options;
   const stem = join(directory, name);
-  const stdout = `${stem}.stdout`, stderr = `${stem}.stderr`, resultPath = `${stem}.termination`, cancel = `${stem}.cancel`;
-  await Promise.all([writeFile(stdout, ""), writeFile(stderr, ""), writeFile(`${stem}.stdin`, options.input ?? ""), writeFile(`${stem}.ps1`, helper)]);
-  await writeFile(`${stem}.json`, JSON.stringify({ executable, command: [executable, ...args].map(quote).join(" "), cwd, input: `${stem}.stdin`, output: stdout, error: stderr, result: resultPath, cancel, started: `${stem}.started.json`, supervisor: `${stem}.supervisor.json`, jobName: jobName(stem), owner: process.pid, ownerCreatedAt: ownerCreation(), timeout: options.timeoutSeconds * 1000 }));
-  const abort = (): void => { void writeFile(cancel, "cancelled"); };
+  const stdout = `${stem}.stdout`;
+  const stderr = `${stem}.stderr`;
+  const resultPath = `${stem}.termination`;
+  const cancel = `${stem}.cancel`;
+  await Promise.all([
+    writeFile(stdout, ""),
+    writeFile(stderr, ""),
+    writeFile(`${stem}.stdin`, options.input ?? ""),
+    writeFile(`${stem}.ps1`, helper),
+  ]);
+  await writeFile(
+    `${stem}.json`,
+    JSON.stringify({
+      executable,
+      command: [executable, ...args].map(quote).join(" "),
+      cwd,
+      input: `${stem}.stdin`,
+      output: stdout,
+      error: stderr,
+      result: resultPath,
+      cancel,
+      started: `${stem}.started.json`,
+      supervisor: `${stem}.supervisor.json`,
+      jobName: jobName(stem),
+      owner: process.pid,
+      ownerCreatedAt: ownerCreation(),
+      timeout: options.timeoutSeconds * 1000,
+    }),
+  );
+  const abort = (): void => {
+    void writeFile(cancel, "cancelled");
+  };
   options.signal?.addEventListener("abort", abort, { once: true });
-  if (options.signal?.aborted) await writeFile(cancel, "cancelled");
+  if (options.signal?.aborted) {
+    await writeFile(cancel, "cancelled");
+  }
   let termination: ProcessTermination;
   let completed: Promise<string> | undefined;
   let stopSupervisor: (() => void) | undefined;
   try {
     let closed = false;
     completed = new Promise<string>((done) => {
-      const child = spawn(join(process.env.SystemRoot ?? "C:/Windows", "System32/WindowsPowerShell/v1.0/powershell.exe"), ["-NoProfile", "-NonInteractive", "-File", `${stem}.ps1`, "-Config", `${stem}.json`], { cwd: directory, env: options.trustedEnvironment ?? (options.trustedGitHub ? { ...cleanEnvironment(), ...(process.env.GH_TOKEN ? { GH_TOKEN: process.env.GH_TOKEN } : {}), ...(process.env.GITHUB_TOKEN ? { GITHUB_TOKEN: process.env.GITHUB_TOKEN } : {}) } : cleanEnvironment()), windowsHide: true, stdio: ["ignore", "ignore", "pipe"] });
-      stopSupervisor = () => { child.kill(); };
+      const child = spawn(
+        join(
+          process.env.SystemRoot ?? "C:/Windows",
+          "System32/WindowsPowerShell/v1.0/powershell.exe",
+        ),
+        [
+          "-NoProfile",
+          "-NonInteractive",
+          "-File",
+          `${stem}.ps1`,
+          "-Config",
+          `${stem}.json`,
+        ],
+        {
+          cwd: directory,
+          env:
+            options.trustedEnvironment ??
+            (options.trustedGitHub
+              ? {
+                  ...cleanEnvironment(),
+                  ...(process.env.GH_TOKEN
+                    ? { GH_TOKEN: process.env.GH_TOKEN }
+                    : {}),
+                  ...(process.env.GITHUB_TOKEN
+                    ? { GITHUB_TOKEN: process.env.GITHUB_TOKEN }
+                    : {}),
+                }
+              : cleanEnvironment()),
+          windowsHide: true,
+          stdio: ["ignore", "ignore", "pipe"],
+        },
+      );
+      stopSupervisor = () => {
+        child.kill();
+      };
       let error = "";
-      const deadline = setTimeout(() => { error = "Job supervisor exceeded its launch and cleanup allowance"; child.kill(); }, (options.timeoutSeconds + 45) * 1000);
-      child.stderr.on("data", (chunk: Buffer) => { if (error.length < 65536) error += chunk.toString(); });
-      child.on("error", e => { closed = true; clearTimeout(deadline); done(e.message); });
-      child.on("close", () => { closed = true; clearTimeout(deadline); done(error); });
+      const deadline = setTimeout(
+        () => {
+          error = "Job supervisor exceeded its launch and cleanup allowance";
+          child.kill();
+        },
+        (options.timeoutSeconds + 45) * 1000,
+      );
+      child.stderr.on("data", (chunk: Buffer) => {
+        if (error.length < 65536) {
+          error += chunk.toString();
+        }
+      });
+      child.on("error", (e) => {
+        closed = true;
+        clearTimeout(deadline);
+        done(e.message);
+      });
+      child.on("close", () => {
+        closed = true;
+        clearTimeout(deadline);
+        done(error);
+      });
     });
     if (options.onStarted) {
       while (true) {
         let identity: ProcessIdentity | undefined;
-        try { identity = JSON.parse(await readFile(`${stem}.started.json`, "utf8")) as ProcessIdentity; }
-        catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error; }
-        if (identity) { await options.onStarted(identity); break; }
-        if (closed) break;
-        await new Promise(done => setTimeout(done, 25));
+        try {
+          identity = JSON.parse(
+            await readFile(`${stem}.started.json`, "utf8"),
+          ) as ProcessIdentity;
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+            throw error;
+          }
+        }
+        if (identity) {
+          await options.onStarted(identity);
+          break;
+        }
+        if (closed) {
+          break;
+        }
+        await new Promise((done) => setTimeout(done, 25));
       }
     }
     const supervisorError = await completed;
     let text: string;
-    try { text = await readFile(resultPath, "utf8"); } catch { throw new Error(supervisorError || "Job supervisor did not report termination"); }
-    if (text.startsWith("exited:")) termination = { kind: "exited", exitCode: Number(text.slice(7)) };
-    else if (text === "timeout" || text === "cancelled") termination = { kind: text, reason: `Process ${text}` };
-    else termination = { kind: "launch_error", reason: text };
+    try {
+      text = await readFile(resultPath, "utf8");
+    } catch {
+      throw new Error(
+        supervisorError || "Job supervisor did not report termination",
+      );
+    }
+    if (text.startsWith("exited:")) {
+      termination = { kind: "exited", exitCode: Number(text.slice(7)) };
+    } else if (text === "timeout" || text === "cancelled") {
+      termination = { kind: text, reason: `Process ${text}` };
+    } else {
+      termination = { kind: "launch_error", reason: text };
+    }
   } catch (error) {
     // A failed durable start observation cannot release a live worker to verification or completion.
     if (completed) {
-      try { await writeFile(cancel, "Start observation failed"); } catch { stopSupervisor?.(); }
+      try {
+        await writeFile(cancel, "Start observation failed");
+      } catch {
+        stopSupervisor?.();
+      }
       await completed.catch(() => {});
     }
     termination = { kind: "launch_error", reason: String(error) };
+  } finally {
+    options.signal?.removeEventListener("abort", abort);
   }
-  finally { options.signal?.removeEventListener("abort", abort); }
-  return { executable, args, cwd, termination, stdout: await artifact(stdout), stderr: await artifact(stderr) };
+  return {
+    executable,
+    args,
+    cwd,
+    termination,
+    stdout: await artifact(stdout),
+    stderr: await artifact(stderr),
+  };
 }

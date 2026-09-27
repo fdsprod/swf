@@ -1,4 +1,13 @@
-import type { CliResult, FactoryEvent, UnitAction, UnitExecutionState, VerificationContract, WorkGraph, WorkRequest, WorkUnit } from "../contracts/index.js";
+import type {
+  CliResult,
+  FactoryEvent,
+  UnitAction,
+  UnitExecutionState,
+  VerificationContract,
+  WorkGraph,
+  WorkRequest,
+  WorkUnit,
+} from "../contracts/index.js";
 import type { AgentExecutor, VerificationEngine } from "./ports.js";
 import { transition } from "./transition.js";
 
@@ -15,14 +24,28 @@ export async function run(
     verification: structuredClone(verification),
     metadata: structuredClone(request.metadata),
   };
-  const graph: WorkGraph = { id: `${request.id}:graph`, requestId: request.id, units: [unit], dependencies: [] };
+  const graph: WorkGraph = {
+    id: `${request.id}:graph`,
+    requestId: request.id,
+    units: [unit],
+    dependencies: [],
+  };
   let state: UnitExecutionState = { status: "PENDING", unit };
-  const events: FactoryEvent[] = [{ type: "WorkGraphCreated", graphId: graph.id, unitIds: [unit.id] }];
+  const events: FactoryEvent[] = [
+    { type: "WorkGraphCreated", graphId: graph.id, unitIds: [unit.id] },
+  ];
 
   function advance(action: UnitAction): UnitExecutionState {
     const result = transition(state, action);
-    if (result.kind === "rejected") throw new Error(result.reason);
-    events.push({ type: "UnitStateChanged", unitId: unit.id, from: state.status, to: result.state.status });
+    if (result.kind === "rejected") {
+      throw new Error(result.reason);
+    }
+    events.push({
+      type: "UnitStateChanged",
+      unitId: unit.id,
+      from: state.status,
+      to: result.state.status,
+    });
     return result.state;
   }
 
@@ -34,8 +57,15 @@ export async function run(
   state = advance({ type: "agent_finished", outcome });
 
   if (state.status === "VERIFYING") {
-    events.push({ type: "VerificationStarted", unitId: unit.id, specIds: unit.verification.required.map(spec => spec.id) });
-    const results = await verifier.verify(structuredClone(unit), structuredClone(unit.verification.required));
+    events.push({
+      type: "VerificationStarted",
+      unitId: unit.id,
+      specIds: unit.verification.required.map((spec) => spec.id),
+    });
+    const results = await verifier.verify(
+      structuredClone(unit),
+      structuredClone(unit.verification.required),
+    );
     events.push({ type: "VerificationFinished", unitId: unit.id, results });
     state = advance({ type: "verification_finished", results });
   }

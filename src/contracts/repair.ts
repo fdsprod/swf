@@ -2,7 +2,10 @@ import type { VerificationResult } from "./index.js";
 import type { Artifact, ProcessRecord } from "./local.js";
 import type { AttemptIdentity } from "./durable.js";
 
-export interface RepairConfig { kind: "local_verification"; maxRepairs?: number }
+export interface RepairConfig {
+  kind: "local_verification";
+  maxRepairs?: number;
+}
 export interface RepairReservation {
   repairId: string;
   failedVerificationId: string;
@@ -17,5 +20,10 @@ export interface RepairContext {
   failedAttemptId: string;
   evidence: Artifact;
   results: VerificationResult[];
-  commands: { specId: string; process: ProcessRecord; stdoutBase64: string; stderrBase64: string }[];
+  commands: {
+    specId: string;
+    process: ProcessRecord;
+    stdoutBase64: string;
+    stderrBase64: string;
+  }[];
 }

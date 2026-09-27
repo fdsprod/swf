@@ -2,24 +2,75 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://swf.local/schemas/p1/local-result.schema.json",
   "oneOf": [
-    {"type": "object", "additionalProperties": false, "required": ["kind"], "properties": {"kind": {"const": "not_implemented"}}},
-    {"type": "object", "additionalProperties": false, "required": ["kind", "issues", "events"], "properties": {"kind": {"const": "input_error"}, "issues": {"type": "array", "minItems": 1, "items": {"$ref": "#/definitions/text"}}, "events": {"type": "array", "maxItems": 0}}},
-    {"type": "object", "additionalProperties": false, "required": ["kind", "status", "issues"], "properties": {"kind": {"const": "evidence_check"}, "status": {"enum": ["current", "invalid"]}, "issues": {"type": "array", "items": {"$ref": "#/definitions/text"}}}},
     {
-      "type": "object", "additionalProperties": false, "required": ["kind", "graph", "state", "events", "workspace", "evidence"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind"],
+      "properties": { "kind": { "const": "not_implemented" } }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "issues", "events"],
       "properties": {
-        "kind": {"const": "local_run_result"},
-        "graph": {"$ref": "../p0/cli-result.schema.json#/oneOf/2/properties/graph"},
-        "state": {"$ref": "../p0/cli-result.schema.json#/definitions/state"},
-        "events": {"type": "array", "items": {"$ref": "../p0/cli-result.schema.json#/definitions/event"}},
-        "workspace": {"$ref": "#/definitions/workspace"},
-        "evidence": {"$ref": "#/definitions/artifact"}
+        "kind": { "const": "input_error" },
+        "issues": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/definitions/text" }
+        },
+        "events": { "type": "array", "maxItems": 0 }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "status", "issues"],
+      "properties": {
+        "kind": { "const": "evidence_check" },
+        "status": { "enum": ["current", "invalid"] },
+        "issues": { "type": "array", "items": { "$ref": "#/definitions/text" } }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "graph", "state", "events", "workspace", "evidence"],
+      "properties": {
+        "kind": { "const": "local_run_result" },
+        "graph": {
+          "$ref": "../p0/cli-result.schema.json#/oneOf/2/properties/graph"
+        },
+        "state": { "$ref": "../p0/cli-result.schema.json#/definitions/state" },
+        "events": {
+          "type": "array",
+          "items": { "$ref": "../p0/cli-result.schema.json#/definitions/event" }
+        },
+        "workspace": { "$ref": "#/definitions/workspace" },
+        "evidence": { "$ref": "#/definitions/artifact" }
       }
     }
   ],
   "definitions": {
-    "text": {"type": "string", "pattern": "\\S"},
-    "artifact": {"type": "object", "additionalProperties": false, "required": ["path", "digest"], "properties": {"path": {"$ref": "#/definitions/text"}, "digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"}}},
-    "workspace": {"type": "object", "additionalProperties": false, "required": ["path", "repositoryPath", "baseCommit"], "properties": {"path": {"$ref": "#/definitions/text"}, "repositoryPath": {"$ref": "#/definitions/text"}, "baseCommit": {"type": "string", "pattern": "^[a-f0-9]{40,64}$"}}}
+    "text": { "type": "string", "pattern": "\\S" },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "digest"],
+      "properties": {
+        "path": { "$ref": "#/definitions/text" },
+        "digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      }
+    },
+    "workspace": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "repositoryPath", "baseCommit"],
+      "properties": {
+        "path": { "$ref": "#/definitions/text" },
+        "repositoryPath": { "$ref": "#/definitions/text" },
+        "baseCommit": { "type": "string", "pattern": "^[a-f0-9]{40,64}$" }
+      }
+    }
   }
 }

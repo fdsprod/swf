@@ -1,30 +1,133 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://swf.local/schemas/p1/local-evidence.schema.json",
-  "type": "object", "additionalProperties": false,
-  "required": ["schemaVersion", "kind", "attemptId", "workspace", "candidate", "contract", "worker", "commands", "changedPaths", "diff", "verdict"],
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "kind",
+    "attemptId",
+    "workspace",
+    "candidate",
+    "contract",
+    "worker",
+    "commands",
+    "changedPaths",
+    "diff",
+    "verdict"
+  ],
   "properties": {
-    "schemaVersion": {"const": 1}, "kind": {"const": "local_evidence"}, "attemptId": {"$ref": "#/definitions/text"},
-    "workspace": {"$ref": "local-result.schema.json#/definitions/workspace"},
-    "candidate": {"type": "object", "additionalProperties": false, "required": ["digest", "files"], "properties": {"digest": {"$ref": "#/definitions/digest"}, "files": {"type": "array", "items": {"type": "object", "additionalProperties": false, "required": ["path", "digest", "mode"], "properties": {"path": {"$ref": "#/definitions/text"}, "digest": {"$ref": "#/definitions/digest"}, "mode": {"$ref": "#/definitions/text"}}}}}},
-    "contract": {"type": "object", "additionalProperties": false, "required": ["digest", "config", "programs"], "properties": {"digest": {"$ref": "#/definitions/digest"}, "config": {"$ref": "local-config.schema.json"}, "programs": {"type": "array", "items": {"$ref": "local-result.schema.json#/definitions/artifact"}}}},
-    "worker": {"type": "object", "additionalProperties": false, "required": ["process", "outcome"], "properties": {"process": {"$ref": "#/definitions/process"}, "outcome": {"$ref": "../p0/run-fixture.schema.json#/definitions/agentOutcome"}}},
-    "commands": {"type": "array", "items": {"type": "object", "additionalProperties": false, "required": ["specId", "process"], "properties": {"specId": {"$ref": "#/definitions/text"}, "process": {"$ref": "#/definitions/process"}}}},
-    "changedPaths": {"type": "array", "items": {"$ref": "#/definitions/text"}},
-    "diff": {"$ref": "local-result.schema.json#/definitions/artifact"},
-    "verdict": {"$ref": "../p0/cli-result.schema.json#/definitions/state"}
+    "schemaVersion": { "const": 1 },
+    "kind": { "const": "local_evidence" },
+    "attemptId": { "$ref": "#/definitions/text" },
+    "workspace": { "$ref": "local-result.schema.json#/definitions/workspace" },
+    "candidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["digest", "files"],
+      "properties": {
+        "digest": { "$ref": "#/definitions/digest" },
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path", "digest", "mode"],
+            "properties": {
+              "path": { "$ref": "#/definitions/text" },
+              "digest": { "$ref": "#/definitions/digest" },
+              "mode": { "$ref": "#/definitions/text" }
+            }
+          }
+        }
+      }
+    },
+    "contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["digest", "config", "programs"],
+      "properties": {
+        "digest": { "$ref": "#/definitions/digest" },
+        "config": { "$ref": "local-config.schema.json" },
+        "programs": {
+          "type": "array",
+          "items": { "$ref": "local-result.schema.json#/definitions/artifact" }
+        }
+      }
+    },
+    "worker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["process", "outcome"],
+      "properties": {
+        "process": { "$ref": "#/definitions/process" },
+        "outcome": {
+          "$ref": "../p0/run-fixture.schema.json#/definitions/agentOutcome"
+        }
+      }
+    },
+    "commands": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["specId", "process"],
+        "properties": {
+          "specId": { "$ref": "#/definitions/text" },
+          "process": { "$ref": "#/definitions/process" }
+        }
+      }
+    },
+    "changedPaths": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/text" }
+    },
+    "diff": { "$ref": "local-result.schema.json#/definitions/artifact" },
+    "verdict": { "$ref": "../p0/cli-result.schema.json#/definitions/state" }
   },
   "definitions": {
-    "text": {"type": "string", "pattern": "\\S"}, "digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
-    "termination": {"oneOf": [
-      {"type": "object", "additionalProperties": false, "required": ["kind", "exitCode"], "properties": {"kind": {"const": "exited"}, "exitCode": {"type": "integer"}}},
-      {"type": "object", "additionalProperties": false, "required": ["kind", "reason"], "properties": {"kind": {"enum": ["timeout", "cancelled", "launch_error"]}, "reason": {"$ref": "#/definitions/text"}}}
-    ]},
+    "text": { "type": "string", "pattern": "\\S" },
+    "digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "termination": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "exitCode"],
+          "properties": {
+            "kind": { "const": "exited" },
+            "exitCode": { "type": "integer" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "reason"],
+          "properties": {
+            "kind": { "enum": ["timeout", "cancelled", "launch_error"] },
+            "reason": { "$ref": "#/definitions/text" }
+          }
+        }
+      ]
+    },
     "process": {
-      "type": "object", "additionalProperties": false, "required": ["executable", "args", "cwd", "termination", "stdout", "stderr"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "executable",
+        "args",
+        "cwd",
+        "termination",
+        "stdout",
+        "stderr"
+      ],
       "properties": {
-        "executable": {"$ref": "#/definitions/text"}, "args": {"type": "array", "items": {"type": "string"}}, "cwd": {"$ref": "#/definitions/text"}, "termination": {"$ref": "#/definitions/termination"},
-        "stdout": {"$ref": "local-result.schema.json#/definitions/artifact"}, "stderr": {"$ref": "local-result.schema.json#/definitions/artifact"}
+        "executable": { "$ref": "#/definitions/text" },
+        "args": { "type": "array", "items": { "type": "string" } },
+        "cwd": { "$ref": "#/definitions/text" },
+        "termination": { "$ref": "#/definitions/termination" },
+        "stdout": { "$ref": "local-result.schema.json#/definitions/artifact" },
+        "stderr": { "$ref": "local-result.schema.json#/definitions/artifact" }
       }
     }
   }

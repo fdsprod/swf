@@ -5,9 +5,7 @@
     {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "kind"
-      ],
+      "required": ["kind"],
       "properties": {
         "kind": {
           "const": "not_implemented"
@@ -17,11 +15,7 @@
     {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "kind",
-        "projection",
-        "events"
-      ],
+      "required": ["kind", "projection", "events"],
       "properties": {
         "kind": {
           "const": "durable_result"
@@ -40,11 +34,7 @@
     {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "kind",
-        "projection",
-        "events"
-      ],
+      "required": ["kind", "projection", "events"],
       "properties": {
         "kind": {
           "const": "durable_status"
@@ -63,11 +53,7 @@
     {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "kind",
-        "code",
-        "issues"
-      ],
+      "required": ["kind", "code", "issues"],
       "properties": {
         "kind": {
           "const": "durable_error"
@@ -131,11 +117,7 @@
     "processIdentity": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "pid",
-        "createdAt",
-        "executable"
-      ],
+      "required": ["pid", "createdAt", "executable"],
       "properties": {
         "pid": {
           "type": "integer",
@@ -154,11 +136,7 @@
     "attemptIdentity": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "id",
-        "ordinal",
-        "completionPath"
-      ],
+      "required": ["id", "ordinal", "completionPath"],
       "properties": {
         "id": {
           "type": "string",
@@ -179,12 +157,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "kind",
-            "id",
-            "ordinal",
-            "completionPath"
-          ],
+          "required": ["kind", "id", "ordinal", "completionPath"],
           "properties": {
             "kind": {
               "const": "reserved"
@@ -206,13 +179,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "kind",
-            "id",
-            "ordinal",
-            "completionPath",
-            "process"
-          ],
+          "required": ["kind", "id", "ordinal", "completionPath", "process"],
           "properties": {
             "kind": {
               "const": "running"
@@ -315,9 +282,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "kind"
-          ],
+          "required": ["kind"],
           "properties": {
             "kind": {
               "const": "unplanned"
@@ -327,11 +292,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "kind",
-            "operationId",
-            "workspace"
-          ],
+          "required": ["kind", "operationId", "workspace"],
           "properties": {
             "kind": {
               "const": "intent"
@@ -348,11 +309,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "kind",
-            "operationId",
-            "workspace"
-          ],
+          "required": ["kind", "operationId", "workspace"],
           "properties": {
             "kind": {
               "const": "ready"
@@ -373,9 +330,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "kind"
-          ],
+          "required": ["kind"],
           "properties": {
             "kind": {
               "const": "idle"
@@ -385,12 +340,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "kind",
-            "operationId",
-            "attemptId",
-            "evidencePath"
-          ],
+          "required": ["kind", "operationId", "attemptId", "evidencePath"],
           "properties": {
             "kind": {
               "const": "intent"
@@ -445,13 +395,7 @@
     "workerCompletion": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "schemaVersion",
-        "kind",
-        "attemptId",
-        "process",
-        "outcome"
-      ],
+      "required": ["schemaVersion", "kind", "attemptId", "process", "outcome"],
       "properties": {
         "schemaVersion": {
           "const": 1
@@ -476,13 +420,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "type",
-            "contract",
-            "graph",
-            "maxStarts",
-            "baseCommit"
-          ],
+          "required": ["type", "contract", "graph", "maxStarts", "baseCommit"],
           "properties": {
             "type": {
               "const": "RunCreated"
@@ -510,11 +448,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "type",
-            "operationId",
-            "workspace"
-          ],
+          "required": ["type", "operationId", "workspace"],
           "properties": {
             "type": {
               "const": "WorkspacePlanned"
@@ -531,10 +465,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "type",
-            "operationId"
-          ],
+          "required": ["type", "operationId"],
           "properties": {
             "type": {
               "const": "WorkspaceReady"
@@ -548,10 +479,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "type",
-            "attempt"
-          ],
+          "required": ["type", "attempt"],
           "properties": {
             "type": {
               "const": "AttemptReserved"
@@ -564,11 +492,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "type",
-            "attemptId",
-            "process"
-          ],
+          "required": ["type", "attemptId", "process"],
           "properties": {
             "type": {
               "const": "WorkerStarted"
@@ -585,12 +509,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "type",
-            "attemptId",
-            "reason",
-            "artifacts"
-          ],
+          "required": ["type", "attemptId", "reason", "artifacts"],
           "properties": {
             "type": {
               "const": "AttemptInterrupted"
@@ -614,12 +533,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "type",
-            "attemptId",
-            "outcome",
-            "record"
-          ],
+          "required": ["type", "attemptId", "outcome", "record"],
           "properties": {
             "type": {
               "const": "WorkerCompleted"
@@ -639,12 +553,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "type",
-            "operationId",
-            "attemptId",
-            "evidencePath"
-          ],
+          "required": ["type", "operationId", "attemptId", "evidencePath"],
           "properties": {
             "type": {
               "const": "VerificationPlanned"
@@ -666,13 +575,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "type",
-            "operationId",
-            "results",
-            "issues",
-            "evidence"
-          ],
+          "required": ["type", "operationId", "results", "issues", "evidence"],
           "properties": {
             "type": {
               "const": "VerificationCompleted"
@@ -702,11 +605,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "type",
-            "reason",
-            "message"
-          ],
+          "required": ["type", "reason", "message"],
           "properties": {
             "type": {
               "const": "RunStopped"
@@ -727,11 +626,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "type",
-            "decisionId",
-            "publication"
-          ],
+          "required": ["type", "decisionId", "publication"],
           "properties": {
             "type": {
               "const": "DecisionPublicationPlanned"
@@ -748,11 +643,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "type",
-            "decisionId",
-            "operationId"
-          ],
+          "required": ["type", "decisionId", "operationId"],
           "properties": {
             "type": {
               "const": "DecisionPublicationStarted"
@@ -770,12 +661,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "type",
-            "decisionId",
-            "operationId",
-            "receipt"
-          ],
+          "required": ["type", "decisionId", "operationId", "receipt"],
           "properties": {
             "type": {
               "const": "DecisionPublished"
@@ -796,11 +682,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "type",
-            "decisionId",
-            "conflict"
-          ],
+          "required": ["type", "decisionId", "conflict"],
           "properties": {
             "type": {
               "const": "DecisionConflictObserved"
@@ -817,12 +699,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "type",
-            "decisionId",
-            "resolution",
-            "source"
-          ],
+          "required": ["type", "decisionId", "resolution", "source"],
           "properties": {
             "type": {
               "const": "DecisionResolved"
@@ -872,10 +749,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "type",
-            "plan"
-          ],
+          "required": ["type", "plan"],
           "properties": {
             "type": {
               "const": "DeliveryPlanned"
@@ -888,11 +762,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "type",
-            "operationId",
-            "receipt"
-          ],
+          "required": ["type", "operationId", "receipt"],
           "properties": {
             "type": {
               "const": "CommitCreated"
@@ -909,10 +779,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "type",
-            "operationId"
-          ],
+          "required": ["type", "operationId"],
           "properties": {
             "type": {
               "const": "PushStarted"
@@ -926,11 +793,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "type",
-            "operationId",
-            "receipt"
-          ],
+          "required": ["type", "operationId", "receipt"],
           "properties": {
             "type": {
               "const": "PushConfirmed"
@@ -947,10 +810,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "type",
-            "publication"
-          ],
+          "required": ["type", "publication"],
           "properties": {
             "type": {
               "const": "PrPlanned"
@@ -963,10 +823,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "type",
-            "operationId"
-          ],
+          "required": ["type", "operationId"],
           "properties": {
             "type": {
               "const": "PrStarted"
@@ -980,11 +837,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "type",
-            "operationId",
-            "receipt"
-          ],
+          "required": ["type", "operationId", "receipt"],
           "properties": {
             "type": {
               "const": "PrCreated"
@@ -1001,10 +854,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "type",
-            "receipt"
-          ],
+          "required": ["type", "receipt"],
           "properties": {
             "type": {
               "const": "PullRequestObserved"
@@ -1017,10 +867,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "type",
-            "observation"
-          ],
+          "required": ["type", "observation"],
           "properties": {
             "type": {
               "const": "CiObserved"
@@ -1035,11 +882,7 @@
     "event": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "sequence",
-        "runId",
-        "fact"
-      ],
+      "required": ["sequence", "runId", "fact"],
       "properties": {
         "sequence": {
           "type": "integer",
@@ -1219,10 +1062,7 @@
     "githubIdentity": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "id",
-        "login"
-      ],
+      "required": ["id", "login"],
       "properties": {
         "id": {
           "type": "integer",
@@ -1237,13 +1077,7 @@
     "commentIdentity": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "id",
-        "url",
-        "author",
-        "createdAt",
-        "updatedAt"
-      ],
+      "required": ["id", "url", "author", "createdAt", "updatedAt"],
       "properties": {
         "id": {
           "type": "integer",
@@ -1269,11 +1103,7 @@
     "decisionPublication": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "operationId",
-        "publisher",
-        "body"
-      ],
+      "required": ["operationId", "publisher", "body"],
       "properties": {
         "operationId": {
           "type": "string",
@@ -1290,10 +1120,7 @@
     "decisionReceipt": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "comment",
-        "record"
-      ],
+      "required": ["comment", "record"],
       "properties": {
         "comment": {
           "$ref": "#/definitions/commentIdentity"
@@ -1306,10 +1133,7 @@
     "decisionConflict": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "comments",
-        "record"
-      ],
+      "required": ["comments", "record"],
       "properties": {
         "comments": {
           "type": "array",
@@ -1372,11 +1196,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "attemptId",
-            "request",
-            "kind"
-          ],
+          "required": ["attemptId", "request", "kind"],
           "properties": {
             "attemptId": {
               "type": "string",
@@ -1393,12 +1213,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "attemptId",
-            "request",
-            "kind",
-            "publication"
-          ],
+          "required": ["attemptId", "request", "kind", "publication"],
           "properties": {
             "attemptId": {
               "type": "string",
@@ -1418,12 +1233,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "attemptId",
-            "request",
-            "kind",
-            "publication"
-          ],
+          "required": ["attemptId", "request", "kind", "publication"],
           "properties": {
             "attemptId": {
               "type": "string",
@@ -1544,12 +1354,7 @@
     "repairReservation": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "repairId",
-        "failedVerificationId",
-        "evidence",
-        "attempt"
-      ],
+      "required": ["repairId", "failedVerificationId", "evidence", "attempt"],
       "properties": {
         "repairId": {
           "type": "string",
@@ -1570,10 +1375,7 @@
     "commitIdentity": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "name",
-        "email"
-      ],
+      "required": ["name", "email"],
       "properties": {
         "name": {
           "type": "string",
@@ -1588,10 +1390,7 @@
     "requiredCheck": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "name",
-        "appId"
-      ],
+      "required": ["name", "appId"],
       "properties": {
         "name": {
           "type": "string",
@@ -1608,10 +1407,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "kind",
-            "url"
-          ],
+          "required": ["kind", "url"],
           "properties": {
             "kind": {
               "const": "github_https"
@@ -1625,10 +1421,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "kind",
-            "path"
-          ],
+          "required": ["kind", "path"],
           "properties": {
             "kind": {
               "const": "local_bare"
@@ -1662,11 +1455,7 @@
         "issue": {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "owner",
-            "repo",
-            "number"
-          ],
+          "required": ["owner", "repo", "number"],
           "properties": {
             "owner": {
               "type": "string",
@@ -1737,11 +1526,7 @@
             "worker": {
               "type": "object",
               "additionalProperties": false,
-              "required": [
-                "executable",
-                "prefixArgs",
-                "timeoutSeconds"
-              ],
+              "required": ["executable", "prefixArgs", "timeoutSeconds"],
               "properties": {
                 "executable": {
                   "$ref": "https://swf.local/schemas/p1/local-config.schema.json#/definitions/text"
@@ -1762,11 +1547,7 @@
               "items": {
                 "type": "object",
                 "additionalProperties": false,
-                "required": [
-                  "specId",
-                  "executable",
-                  "args"
-                ],
+                "required": ["specId", "executable", "args"],
                 "properties": {
                   "specId": {
                     "$ref": "https://swf.local/schemas/p1/local-config.schema.json#/definitions/text"
@@ -1818,11 +1599,7 @@
         "github": {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "executable",
-            "prefixArgs",
-            "timeoutSeconds"
-          ],
+          "required": ["executable", "prefixArgs", "timeoutSeconds"],
           "properties": {
             "executable": {
               "type": "string",
@@ -1845,10 +1622,7 @@
         "git": {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "executable",
-            "timeoutSeconds"
-          ],
+          "required": ["executable", "timeoutSeconds"],
           "properties": {
             "executable": {
               "type": "string",
@@ -1864,20 +1638,14 @@
         "delivery": {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "transport",
-            "commitIdentity",
-            "requiredChecks"
-          ],
+          "required": ["transport", "commitIdentity", "requiredChecks"],
           "properties": {
             "transport": {
               "oneOf": [
                 {
                   "type": "object",
                   "additionalProperties": false,
-                  "required": [
-                    "kind"
-                  ],
+                  "required": ["kind"],
                   "properties": {
                     "kind": {
                       "const": "github_https"
@@ -1887,10 +1655,7 @@
                 {
                   "type": "object",
                   "additionalProperties": false,
-                  "required": [
-                    "kind",
-                    "path"
-                  ],
+                  "required": ["kind", "path"],
                   "properties": {
                     "kind": {
                       "const": "local_bare"
@@ -1919,9 +1684,7 @@
         "decisions": {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "authorizedResolver"
-          ],
+          "required": ["authorizedResolver"],
           "properties": {
             "authorizedResolver": {
               "$ref": "#/definitions/githubIdentity"
@@ -1931,9 +1694,7 @@
         "repair": {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "kind"
-          ],
+          "required": ["kind"],
           "properties": {
             "kind": {
               "const": "local_verification"
@@ -1950,12 +1711,7 @@
     "repositoryIdentity": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "id",
-        "owner",
-        "name",
-        "url"
-      ],
+      "required": ["id", "owner", "name", "url"],
       "properties": {
         "id": {
           "type": "integer",
@@ -1996,11 +1752,7 @@
         "issue": {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "id",
-            "number",
-            "url"
-          ],
+          "required": ["id", "number", "url"],
           "properties": {
             "id": {
               "type": "integer",
@@ -2019,10 +1771,7 @@
         "base": {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "branch",
-            "sha"
-          ],
+          "required": ["branch", "sha"],
           "properties": {
             "branch": {
               "type": "string",
@@ -2040,11 +1789,7 @@
         "records": {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "repository",
-            "issue",
-            "base"
-          ],
+          "required": ["repository", "issue", "base"],
           "properties": {
             "repository": {
               "$ref": "#/definitions/artifact"
@@ -2082,11 +1827,7 @@
         "author": {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "name",
-            "email",
-            "date"
-          ],
+          "required": ["name", "email", "date"],
           "properties": {
             "name": {
               "type": "string",
@@ -2105,11 +1846,7 @@
         "committer": {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "name",
-            "email",
-            "date"
-          ],
+          "required": ["name", "email", "date"],
           "properties": {
             "name": {
               "type": "string",
@@ -2190,10 +1927,7 @@
     "commitReceipt": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "sha",
-        "process"
-      ],
+      "required": ["sha", "process"],
       "properties": {
         "sha": {
           "type": "string",
@@ -2207,11 +1941,7 @@
     "pushReceipt": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "ref",
-        "sha",
-        "process"
-      ],
+      "required": ["ref", "sha", "process"],
       "properties": {
         "ref": {
           "type": "string",
@@ -2229,12 +1959,7 @@
     "pullRequestPlan": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "operationId",
-        "publisher",
-        "title",
-        "body"
-      ],
+      "required": ["operationId", "publisher", "title", "body"],
       "properties": {
         "operationId": {
           "type": "string",
@@ -2257,9 +1982,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "kind"
-          ],
+          "required": ["kind"],
           "properties": {
             "kind": {
               "const": "open"
@@ -2269,9 +1992,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "kind"
-          ],
+          "required": ["kind"],
           "properties": {
             "kind": {
               "const": "closed"
@@ -2281,10 +2002,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "kind",
-            "mergeCommitSha"
-          ],
+          "required": ["kind", "mergeCommitSha"],
           "properties": {
             "kind": {
               "const": "merged"
@@ -2335,11 +2053,7 @@
         "head": {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "repositoryId",
-            "ref",
-            "sha"
-          ],
+          "required": ["repositoryId", "ref", "sha"],
           "properties": {
             "repositoryId": {
               "type": "integer",
@@ -2358,11 +2072,7 @@
         "base": {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "repositoryId",
-            "ref",
-            "sha"
-          ],
+          "required": ["repositoryId", "ref", "sha"],
           "properties": {
             "repositoryId": {
               "type": "integer",
@@ -2391,9 +2101,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "kind"
-          ],
+          "required": ["kind"],
           "properties": {
             "kind": {
               "const": "unplanned"
@@ -2403,10 +2111,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "kind",
-            "plan"
-          ],
+          "required": ["kind", "plan"],
           "properties": {
             "kind": {
               "const": "planned"
@@ -2419,11 +2124,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "kind",
-            "plan",
-            "commit"
-          ],
+          "required": ["kind", "plan", "commit"],
           "properties": {
             "kind": {
               "const": "committed"
@@ -2439,11 +2140,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "kind",
-            "plan",
-            "commit"
-          ],
+          "required": ["kind", "plan", "commit"],
           "properties": {
             "kind": {
               "const": "push_started"
@@ -2459,12 +2156,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "kind",
-            "plan",
-            "commit",
-            "push"
-          ],
+          "required": ["kind", "plan", "commit", "push"],
           "properties": {
             "kind": {
               "const": "pushed"
@@ -2483,13 +2175,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "kind",
-            "plan",
-            "commit",
-            "push",
-            "publication"
-          ],
+          "required": ["kind", "plan", "commit", "push", "publication"],
           "properties": {
             "kind": {
               "const": "pr_planned"
@@ -2511,13 +2197,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "kind",
-            "plan",
-            "commit",
-            "push",
-            "publication"
-          ],
+          "required": ["kind", "plan", "commit", "push", "publication"],
           "properties": {
             "kind": {
               "const": "pr_started"
@@ -2575,14 +2255,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "kind",
-            "id",
-            "name",
-            "appId",
-            "headSha",
-            "status"
-          ],
+          "required": ["kind", "id", "name", "appId", "headSha", "status"],
           "properties": {
             "kind": {
               "const": "pending"
@@ -2617,14 +2290,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "kind",
-            "id",
-            "name",
-            "appId",
-            "headSha",
-            "conclusion"
-          ],
+          "required": ["kind", "id", "name", "appId", "headSha", "conclusion"],
           "properties": {
             "kind": {
               "const": "completed"
@@ -2665,13 +2331,7 @@
     "ciObservation": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "headSha",
-        "before",
-        "after",
-        "checks",
-        "record"
-      ],
+      "required": ["headSha", "before", "after", "checks", "record"],
       "properties": {
         "headSha": {
           "type": "string",
@@ -2700,9 +2360,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "kind"
-          ],
+          "required": ["kind"],
           "properties": {
             "kind": {
               "const": "unobserved"
@@ -2712,10 +2370,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "kind",
-            "observation"
-          ],
+          "required": ["kind", "observation"],
           "properties": {
             "kind": {
               "const": "pending"
@@ -2728,10 +2383,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "kind",
-            "observation"
-          ],
+          "required": ["kind", "observation"],
           "properties": {
             "kind": {
               "const": "passed"
@@ -2744,10 +2396,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "kind",
-            "observation"
-          ],
+          "required": ["kind", "observation"],
           "properties": {
             "kind": {
               "const": "failed"
@@ -2760,10 +2409,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "kind",
-            "observation"
-          ],
+          "required": ["kind", "observation"],
           "properties": {
             "kind": {
               "const": "stale_head"
@@ -2778,10 +2424,7 @@
     "deliverySnapshot": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "schemaVersion",
-        "files"
-      ],
+      "required": ["schemaVersion", "files"],
       "properties": {
         "schemaVersion": {
           "const": 1
@@ -2792,12 +2435,7 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "path",
-              "digest",
-              "mode",
-              "content"
-            ],
+            "required": ["path", "digest", "mode", "content"],
             "properties": {
               "path": {
                 "type": "string",
@@ -2808,10 +2446,7 @@
                 "pattern": "^[a-f0-9]{64}$"
               },
               "mode": {
-                "enum": [
-                  "100644",
-                  "100755"
-                ]
+                "enum": ["100644", "100755"]
               },
               "content": {
                 "$ref": "#/definitions/artifact"
