@@ -3,13 +3,7 @@
   "$id": "https://swf.local/schemas/p3/decision-worker-input.schema.json",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "schemaVersion",
-    "runId",
-    "attemptId",
-    "workspace",
-    "context"
-  ],
+  "required": ["schemaVersion", "runId", "attemptId", "workspace", "context"],
   "properties": {
     "schemaVersion": {
       "const": 1
@@ -138,10 +132,7 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "path",
-              "baseCommit"
-            ],
+            "required": ["path", "baseCommit"],
             "properties": {
               "path": {
                 "type": "string",

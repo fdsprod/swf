@@ -15,7 +15,10 @@
       "required": ["agentOutcome", "verificationResults"],
       "properties": {
         "agentOutcome": { "$ref": "#/definitions/agentOutcome" },
-        "verificationResults": { "type": "array", "items": { "$ref": "#/definitions/verificationResult" } }
+        "verificationResults": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/verificationResult" }
+        }
       }
     }
   },
@@ -26,11 +29,20 @@
     "workRequest": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "source", "repository", "objective", "constraints", "acceptanceCriteria", "metadata"],
+      "required": [
+        "id",
+        "source",
+        "repository",
+        "objective",
+        "constraints",
+        "acceptanceCriteria",
+        "metadata"
+      ],
       "properties": {
         "id": { "$ref": "#/definitions/text" },
         "source": {
-          "type": "object", "additionalProperties": false,
+          "type": "object",
+          "additionalProperties": false,
           "required": ["provider", "externalId"],
           "properties": {
             "provider": { "$ref": "#/definitions/text" },
@@ -39,7 +51,8 @@
           }
         },
         "repository": {
-          "type": "object", "additionalProperties": false,
+          "type": "object",
+          "additionalProperties": false,
           "required": ["url", "baseRef"],
           "properties": {
             "url": { "$ref": "#/definitions/text" },
@@ -52,21 +65,48 @@
         "metadata": { "$ref": "#/definitions/metadata" }
       }
     },
-    "evidence": { "type": "array", "items": { "$ref": "#/definitions/evidenceRef" } },
+    "evidence": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/evidenceRef" }
+    },
     "evidenceRef": {
-      "type": "object", "additionalProperties": false,
+      "type": "object",
+      "additionalProperties": false,
       "required": ["id", "kind", "uri"],
       "properties": {
         "id": { "$ref": "#/definitions/text" },
-        "kind": { "enum": ["file", "command_output", "test_result", "git_diff", "commit", "pull_request", "ci_run", "human_decision", "runtime_observation", "other"] },
+        "kind": {
+          "enum": [
+            "file",
+            "command_output",
+            "test_result",
+            "git_diff",
+            "commit",
+            "pull_request",
+            "ci_run",
+            "human_decision",
+            "runtime_observation",
+            "other"
+          ]
+        },
         "uri": { "$ref": "#/definitions/text" },
         "digest": { "$ref": "#/definitions/text" },
         "metadata": { "$ref": "#/definitions/metadata" }
       }
     },
     "decisionRequest": {
-      "type": "object", "additionalProperties": false,
-      "required": ["id", "runId", "unitId", "question", "reason", "impact", "reversible", "evidence"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "runId",
+        "unitId",
+        "question",
+        "reason",
+        "impact",
+        "reversible",
+        "evidence"
+      ],
       "properties": {
         "id": { "$ref": "#/definitions/text" },
         "runId": { "$ref": "#/definitions/text" },
@@ -76,7 +116,8 @@
         "options": {
           "type": "array",
           "items": {
-            "type": "object", "additionalProperties": false,
+            "type": "object",
+            "additionalProperties": false,
             "required": ["id", "description", "consequences"],
             "properties": {
               "id": { "$ref": "#/definitions/text" },
@@ -93,7 +134,8 @@
     "agentOutcome": {
       "oneOf": [
         {
-          "type": "object", "additionalProperties": false,
+          "type": "object",
+          "additionalProperties": false,
           "required": ["kind", "summary", "evidence"],
           "properties": {
             "kind": { "const": "completed" },
@@ -102,7 +144,8 @@
           }
         },
         {
-          "type": "object", "additionalProperties": false,
+          "type": "object",
+          "additionalProperties": false,
           "required": ["kind", "decision"],
           "properties": {
             "kind": { "const": "decision_required" },
@@ -110,7 +153,8 @@
           }
         },
         {
-          "type": "object", "additionalProperties": false,
+          "type": "object",
+          "additionalProperties": false,
           "required": ["kind", "reason", "evidence"],
           "properties": {
             "kind": { "enum": ["blocked", "failed"] },
@@ -121,13 +165,16 @@
       ]
     },
     "verificationContract": {
-      "type": "object", "additionalProperties": false,
+      "type": "object",
+      "additionalProperties": false,
       "required": ["required", "completionPolicy"],
       "properties": {
         "required": {
-          "type": "array", "minItems": 1,
+          "type": "array",
+          "minItems": 1,
           "items": {
-            "type": "object", "additionalProperties": false,
+            "type": "object",
+            "additionalProperties": false,
             "required": ["kind", "id", "command"],
             "properties": {
               "kind": { "const": "command" },
@@ -139,14 +186,16 @@
           }
         },
         "completionPolicy": {
-          "type": "object", "additionalProperties": false,
+          "type": "object",
+          "additionalProperties": false,
           "required": ["requireAll"],
           "properties": { "requireAll": { "const": true } }
         }
       }
     },
     "verificationResult": {
-      "type": "object", "additionalProperties": false,
+      "type": "object",
+      "additionalProperties": false,
       "required": ["specId", "status", "evidence", "summary"],
       "properties": {
         "specId": { "$ref": "#/definitions/text" },

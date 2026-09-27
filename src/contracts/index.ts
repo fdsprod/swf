@@ -1,4 +1,5 @@
-export type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
+export type JsonValue =
+  null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
 
 export interface WorkRequest {
   id: string;
@@ -12,7 +13,17 @@ export interface WorkRequest {
 
 export interface EvidenceRef {
   id: string;
-  kind: "file" | "command_output" | "test_result" | "git_diff" | "commit" | "pull_request" | "ci_run" | "human_decision" | "runtime_observation" | "other";
+  kind:
+    | "file"
+    | "command_output"
+    | "test_result"
+    | "git_diff"
+    | "commit"
+    | "pull_request"
+    | "ci_run"
+    | "human_decision"
+    | "runtime_observation"
+    | "other";
   uri: string;
   digest?: string;
   metadata?: Record<string, JsonValue>;
@@ -72,9 +83,17 @@ export interface WorkGraph {
 
 export type UnitExecutionState =
   | { status: "PENDING" | "READY" | "RUNNING"; unit: WorkUnit }
-  | { status: "WAITING_FOR_DECISION"; unit: WorkUnit; decision: DecisionRequest }
+  | {
+      status: "WAITING_FOR_DECISION";
+      unit: WorkUnit;
+      decision: DecisionRequest;
+    }
   | { status: "VERIFYING"; unit: WorkUnit }
-  | { status: "VERIFIED" | "REPAIR_READY"; unit: WorkUnit; results: VerificationResult[] }
+  | {
+      status: "VERIFIED" | "REPAIR_READY";
+      unit: WorkUnit;
+      results: VerificationResult[];
+    }
   | { status: "FAILED"; unit: WorkUnit; reason: string };
 
 export type UnitStatus = UnitExecutionState["status"];
@@ -91,20 +110,37 @@ export type TransitionResult =
 
 export type FactoryEvent =
   | { type: "WorkGraphCreated"; graphId: string; unitIds: string[] }
-  | { type: "UnitStateChanged"; unitId: string; from: UnitStatus; to: UnitStatus }
+  | {
+      type: "UnitStateChanged";
+      unitId: string;
+      from: UnitStatus;
+      to: UnitStatus;
+    }
   | { type: "AgentInvocationStarted"; unitId: string }
   | { type: "AgentInvocationFinished"; unitId: string; outcome: AgentOutcome }
   | { type: "VerificationStarted"; unitId: string; specIds: string[] }
-  | { type: "VerificationFinished"; unitId: string; results: VerificationResult[] };
+  | {
+      type: "VerificationFinished";
+      unitId: string;
+      results: VerificationResult[];
+    };
 
 export interface RunFixture {
   schemaVersion: 1;
   request: WorkRequest;
   verification: VerificationContract;
-  script: { agentOutcome: AgentOutcome; verificationResults: VerificationResult[] };
+  script: {
+    agentOutcome: AgentOutcome;
+    verificationResults: VerificationResult[];
+  };
 }
 
 export type CliResult =
-  | { kind: "run_result"; graph: WorkGraph; state: UnitExecutionState; events: FactoryEvent[] }
+  | {
+      kind: "run_result";
+      graph: WorkGraph;
+      state: UnitExecutionState;
+      events: FactoryEvent[];
+    }
   | { kind: "input_error"; issues: string[]; events: [] }
   | { kind: "not_implemented" };

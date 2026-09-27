@@ -3,12 +3,7 @@
   "$id": "https://swf.local/schemas/p3/decision-answer.schema.json",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "schemaVersion",
-    "decisionId",
-    "answer",
-    "selectedOptionId"
-  ],
+  "required": ["schemaVersion", "decisionId", "answer", "selectedOptionId"],
   "properties": {
     "schemaVersion": {
       "const": 1
@@ -22,10 +17,7 @@
       "pattern": "\\S"
     },
     "selectedOptionId": {
-      "type": [
-        "string",
-        "null"
-      ],
+      "type": ["string", "null"],
       "pattern": "\\S"
     }
   }

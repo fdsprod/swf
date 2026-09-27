@@ -12,7 +12,12 @@
     "test": "node --test tests/spec/scenarios/cli.test.mjs tests/spec/scenarios/transitions.test.mjs tests/spec/scenarios/architecture.test.mjs",
     "test:sanity": "node --test tests/spec/harness/sanity.test.mjs",
     "check:architecture": "node tests/spec/harness/architecture.mjs",
-    "check:p0": "node tests/spec/harness/run-gates.mjs"
+    "check:p0": "node tests/spec/harness/run-gates.mjs",
+    "format": "prettier --write \"src/**/*.{ts,js,mjs,cjs,json}\" \"tests/**/*.{ts,js,mjs,cjs,json}\" \"examples/**/*.json\" \"*.{js,mjs,cjs,json}\" \".prettierrc.json\" \".github/workflows/*.{yml,yaml}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,js,mjs,cjs,json}\" \"tests/**/*.{ts,js,mjs,cjs,json}\" \"examples/**/*.json\" \"*.{js,mjs,cjs,json}\" \".prettierrc.json\" \".github/workflows/*.{yml,yaml}\"",
+    "lint": "eslint . --max-warnings 0",
+    "lint:fix": "eslint . --fix --max-warnings 0",
+    "check": "npm run format:check && npm run lint && npm run typecheck && npm run build && npm test && npm run test:sanity && npm run check:architecture"
   },
   "dependencies": {
     "ajv": "8.17.1"

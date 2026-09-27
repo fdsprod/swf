@@ -74,3 +74,28 @@ See the [P5 execution report](docs/phase-reports/p5.md), [P4 local verification 
 ## Worker skills
 
 Optional worker instructions use `LocalConfig.skills` or GitHub `runtime.skills`. See [the skills guide](docs/agent-skills.md) and [the editable skills object](examples/agent-skills.json). If `skills` is absent, the existing behavior stays unchanged.
+
+## Readability checks
+
+Run these commands from the repository root after installing the pinned dependencies:
+
+```powershell
+npm.cmd run format
+npm.cmd run lint:fix
+npm.cmd run format
+npm.cmd run check
+```
+
+The final format pass resolves line layout after ESLint adds braces. Prettier uses
+an 80-column target, two spaces, double quotes, semicolons, and LF line endings.
+Embedded-language formatting is off to preserve embedded scripts. ESLint requires
+braces, separate variable declarations, and at most one statement per line.
+
+Use `npm.cmd run format:check` and `npm.cmd run lint` to check without edits.
+Formatting covers code, schemas, JSON fixtures, examples, and tooling files.
+Prose and PowerShell files are outside the formatting targets. Dependencies,
+generated output, worktrees, runtime state, and proof folders are excluded.
+
+`npm.cmd run check` runs formatting, lint, typecheck, build, core tests, harness
+sanity, and architecture checks. The readability workflow runs this command on
+Windows with Node 22.22.3 for pull requests and pushes to main.
