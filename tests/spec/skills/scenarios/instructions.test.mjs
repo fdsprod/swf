@@ -46,12 +46,12 @@ test('SKILLS-008: interrupted reserved attempt gets fresh identical instructions
 }));
 
 test('SKILLS-009: decision continuation receives the same skills in fresh context',()=>withFixture({kind:'decision'},f=>{
-  const first=run(f);assert.equal(first.result.kind,'durable_run_result');const waiting=readStore(f).projection;assert.equal(waiting.state.status,'WAITING_FOR_DECISION');assertInstructions(rows(f)[0],f.profile,waiting.contract.programs);
+  const first=run(f);assert.equal(first.result.kind,'durable_result');const waiting=readStore(f).projection;assert.equal(waiting.state.status,'WAITING_FOR_DECISION');assertInstructions(rows(f)[0],f.profile,waiting.contract.programs);
   addAnswer(f,waiting.state.decision.id);const {projection,evidence}=verified(f,resume(f));assert.equal(rows(f).length,2);assert.notEqual(rows(f)[0].threadId,rows(f)[1].threadId);assert.notEqual(rows(f)[0].pid,rows(f)[1].pid);assertInstructions(rows(f)[1],f.profile,evidence.contract.programs);assert.equal(rows(f)[1].input.context.decisions.length,1);assert.equal(projection.attempts.length,2);
 }));
 
 test('SKILLS-010: selected asset mutation during human wait stops continuation',()=>withFixture({kind:'decision'},f=>{
-  run(f);const p=readStore(f).projection;assert.equal(p.state.status,'WAITING_FOR_DECISION');addAnswer(f,p.state.decision.id);appendFileSync(join(f.skillRoot,'tdd/asset.bin'),'changed');error(f,resume(f),'artifact_invalid');assert.equal(rows(f).length,1);assert.equal(readStore(f).projection.attempts.length,1);
+  const first=run(f);assert.equal(first.result.kind,'durable_result');const p=readStore(f).projection;assert.equal(p.state.status,'WAITING_FOR_DECISION');addAnswer(f,p.state.decision.id);appendFileSync(join(f.skillRoot,'tdd/asset.bin'),'changed');error(f,resume(f),'artifact_invalid');assert.equal(rows(f).length,1);assert.equal(readStore(f).projection.attempts.length,1);
 }));
 
 test('SKILLS-011: bounded repair retains skill assignment and measured failure context',()=>withFixture({kind:'repair',role:'implementation'},f=>{
